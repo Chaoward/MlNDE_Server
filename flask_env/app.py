@@ -1,4 +1,4 @@
-from flask import Flask
+from flask import Flask, send_from_directory
 
 app = Flask(__name__)
 
@@ -25,6 +25,10 @@ def handleUnverified():
 @app.route("/images/verified", methods=["GET", "POST"])
 def handleVerified():
     pass
+
+@app.route("/images/<filename>")
+def serveImage(filename):
+    return send_from_directory(app.static_folder, filename)
 
 
 
