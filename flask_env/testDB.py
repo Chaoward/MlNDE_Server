@@ -1,5 +1,5 @@
 import sqlite3 as db
-from .Include.sql import *
+from Include.sql import *
 
 def testSqlite():
     connect = db.connect("./db/test.db")
@@ -9,6 +9,7 @@ def testSqlite():
         script = ""
         for line in file.readlines():
             script += line
+        print( script )
         cursor.executescript(script)
         file.close()
 
@@ -29,6 +30,7 @@ def testSqlite():
 def testSql():
     runScript("initTestDB")
     print( select("*", "labels") )
+    """
     print( select("*", "models") )
     insertImages([
         {
@@ -41,6 +43,7 @@ def testSql():
         }
     ])
     print( select('*', 'images') )
+    """
     print( insertLabels(['dino', 'bird']) )
     print( select("*", "labels") )
     setRelease("1.0.0")
@@ -50,3 +53,4 @@ def testSql():
 
 #////////// EXECUTE //////////////////////////
 testSql()
+#testSqlite()

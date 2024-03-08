@@ -12,17 +12,17 @@ CREATE TABLE images (
 );
 
 CREATE TABLE labels (
-    label TEXT NOT NULL PRIMARY KEY,
+    label TEXT PRIMARY KEY
 );
 
 CREATE TABLE verification (
     imageID INT NOT NULL,
-    verified BIT DEFAULT 0
+    verified INT DEFAULT 0
 );
 
 CREATE TABLE models (
     versionNum TEXT,
-    release BIT DEFAULT 0,
+    release INT DEFAULT 0,
     id INTEGER PRIMARY KEY
 );
 
@@ -37,8 +37,8 @@ INSERT INTO images (imgURL, label) VALUES('dino.png', 'dog');
 INSERT INTO images (imgURL, label) VALUES('dog.png', 'dog');
 
 
-INSERT INTO models (versionNum) VALUES ('1.0.0'), ('1.2.9'), ('2.0.1')
-INSERT INTO models (versionNum, release) VALUES('2.2.2', 1)
+INSERT INTO models (versionNum) VALUES ('1.0.0'), ('1.2.9'), ('2.0.1');
+INSERT INTO models (versionNum) VALUES('2.2.2');
 
 
 INSERT INTO verification (imageID)

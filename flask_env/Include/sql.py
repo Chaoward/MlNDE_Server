@@ -1,9 +1,9 @@
 import sqlite3 as db
 
-SQL_SCRIPT_DIR = "../db/sql_scripts/"
-DB_PATH = "../db/test.db"
+SQL_SCRIPT_DIR = "./db/sql_scripts/"
+DB_PATH = "./db/test.db"
 
-def select(cols, table, where):
+def select(cols, table, where=""):
     try:
         connect = db.connect(DB_PATH)
         cur = connect.cursor()
@@ -15,7 +15,10 @@ def select(cols, table, where):
                 strCols += (", " if i > 0 else "") + cols[i]
             cols = strCols
 
-        cur.execute(f"SELECT {cols} FROM {table} {"WHERE " + where if len(where) > 0 else ""};")
+        def _temp():
+            return "WHERE " + where if len(where) > 0 else ""
+
+        cur.execute(f"SELECT {cols} FROM {table} {_temp()};")
         return cur.fetchall()
     except db.OperationalError as e:
         print(e)
@@ -36,7 +39,7 @@ def insertImages(imgs):
         cur = connect.cursor()
 
         for ele in imgs:
-            cur.execute("INSERT INTO images (imgURL, label) VALUES(?, ?);", (ele["imageURl"], ele["label"]) )
+            cur.execute("INSERT INTO images (imgURL, label) VALUES(?, ?);", (ele["imageURL"], ele["label"]) )
 
         #update verification table
         cur.executescript("""
@@ -60,21 +63,23 @@ def insertImages(imgs):
 #
 # RETURNS: int, number of successful inserts
 #=====================================================
+        # TODO: Fix Bug where for-loop breaks into finally statement. No exception raised
 def insertLabels(labels):
     try:
         connect = db.connect(DB_PATH)
         cur = connect.cursor()
         
         count = 0
+        print(f"START: {labels}")
         for label in labels:
             #check if label exist
             cur.execute("SELECT label FROM labels WHERE label = ?", (label) ) 
-            if cur.fetchone() is not None:
-                continue 
-
-            #insert
-            cur.execute("INSERT INTO labels VALUES(?);", (label) )
-            count += 1
+            print(cur.fetchall())
+            if len(cur.fetchall()) != 0:
+                #insert
+                cur.execute("INSERT INTO labels VALUES(?);", (label) )
+                count += 1
+        print("END")
     except db.OperationalError as e:
         print(e)
         raise
@@ -98,7 +103,7 @@ def setRelease(verNum):
         connect = db.connect(DB_PATH)
         cur = connect.cursor()
         
-        cur.execute(f"SELECT release FROM models WHERE versionNum = {verNum};")
+        cur.execute(f"SELECT release FROM models WHERE versionNum = '{verNum}';")
         result = cur.fetchall()
         if len(result) == 0:    #check if target version exist
             return 1
@@ -108,11 +113,12 @@ def setRelease(verNum):
         # update release mark
         cur.executescript(f"""
             UPDATE models SET release = 0 WHERE release = 1;
-            UPDATE models SET release = 1 WHERE versionNum = {verNum}
-            SELECT release FROM models WHERE versionNum = {verNum};
+            UPDATE models SET release = 1 WHERE versionNum = '{verNum}';
+            SELECT * FROM models WHERE release = 1;
         """)
         result = cur.fetchall()
-        if result[0] == 1:
+        print(result)
+        if len(result) == 1 and result[0][0] == verNum:
             return 0
         else:
             return 1
@@ -133,9 +139,7 @@ def runScript(scriptName):
         script = ""
         for line in file.readlines():
             script += line
-            if line.endswith(";"):
-                cur.executescript(script)
-                script = ""
+        cur.executescript(script)
         file.close()
     except FileNotFoundError as e:
         print(e)
