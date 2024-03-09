@@ -8,6 +8,7 @@ DROP TABLE IF EXISTS models;
 CREATE TABLE images (
     imgURL TEXT,
     label TEXT,
+    verified BIT DEFAULT 0,
     id INTEGER PRIMARY KEY
 );
 
@@ -15,15 +16,17 @@ CREATE TABLE labels (
     label TEXT PRIMARY KEY
 );
 
-CREATE TABLE verification (
-    imageID INT NOT NULL,
-    verified INT DEFAULT 0
-);
 
 CREATE TABLE models (
     versionNum TEXT,
-    release INT DEFAULT 0,
+    release BIT DEFAULT 0,
+    imgsTrained INT DEFAULT 0,
     id INTEGER PRIMARY KEY
+);
+
+CREATE TABLE model_label (
+    modelID INTEGER NOT NULL,
+    labelID INTEGER NOT NULL
 );
 
 
@@ -39,8 +42,3 @@ INSERT INTO images (imgURL, label) VALUES('dog.png', 'dog');
 
 INSERT INTO models (versionNum) VALUES ('1.0.0'), ('1.2.9'), ('2.0.1');
 INSERT INTO models (versionNum) VALUES('2.2.2');
-
-
-INSERT INTO verification (imageID)
-    SELECT i.id FROM images i LEFT JOIN verification v ON i.id = v.imageID
-    WHERE v.imageID IS NULL;

@@ -3,6 +3,46 @@ import sqlite3 as db
 SQL_SCRIPT_DIR = "./db/sql_scripts/"
 DB_PATH = "./db/test.db"
 
+##### TABLES ######################################################################  
+# 
+#///// images /////
+# Holds image filenames pair with their labels.
+# Tagged appropiately whither they are unverfied, verfied, or trained.
+# COLUMNS
+#   | imgURL TEXT : File name of image on system
+#   | label TEXT  : string label that exist on the labels table
+#   | verified INT DEFAULT 0  : status code of the following...
+#       * 0 : unverfied
+#       * 1 : verfied
+#       * 2 : trained
+#   | id INTEGER PRIMARY KEY
+# 
+# 
+#///// labels /////
+# COLUMNS
+#   | label TEXT PRIMARY KEY : String label
+# 
+# 
+#///// models /////
+# Holds information of each model 
+# COLUMNS
+#   | versionNum TEXT : string version number in a major.minor.patch form. EX: 1.1.1
+#   | release BIT DEFAULT 0 : boolean whither the model is the release version
+#   | imgsTrained INT DEFAULT 0 : Number of images used to train this model
+#   | id INTEGER PRIMARY KEY
+# 
+# 
+#///// model_label /////
+# many-to-many table for models trained with new labels
+# COLUMNS
+#   | modelID INTEGER NOT NULL
+#   | labelID INTEGER NOT NULL
+#######################################################################################  
+
+
+
+
+
 def select(cols, table, where=""):
     try:
         connect = db.connect(DB_PATH)
@@ -29,7 +69,7 @@ def select(cols, table, where=""):
 
 
 #===== insertImages ==================================
-# Inserts new images with labels into DB.
+# Accepts new images with labels and inserts them into DB.
 # 
 # PARAM: imgs : [ {imageURl, label} ]
 #=====================================================
@@ -41,12 +81,7 @@ def insertImages(imgs):
         for ele in imgs:
             cur.execute("INSERT INTO images (imgURL, label) VALUES(?, ?);", (ele["imageURL"], ele["label"]) )
 
-        #update verification table
-        cur.executescript("""
-            INSERT INTO verification (imageID)
-            SELECT i.id FROM images i LEFT JOIN verification v ON i.id = v.imageID
-            WHERE v.imageID IS NULL;
-        """)
+        connect.commit()
     except db.OperationalError as e:
         print(e)
         connect.rollback()
@@ -54,6 +89,30 @@ def insertImages(imgs):
     finally:
         connect.close()
 
+
+#   TODO: Test
+#===== updateImages ==================================
+# Attempts a list of string labels and inserts to DB.
+# 
+# PARAM: labels : [ {"id": int, "label": string, ...} ]
+#
+# RETURNS: None
+#=====================================================
+def updateImages(imgList):
+    try:
+        connect = db.connect(DB_PATH)
+        cur = connect.cursor()
+
+        for img in imgList:
+            cur.execute(f"UPDATE images SET label = '{img["label"]}' WHERE id = {img["id"]};")
+        
+        connect.commit()
+    except db.OperationalError as e:
+        print(e)
+        connect.rollback()
+        raise
+    finally:
+        connect.close()
 
 
 #===== insertLabels ==================================
@@ -63,29 +122,67 @@ def insertImages(imgs):
 #
 # RETURNS: int, number of successful inserts
 #=====================================================
-        # TODO: Fix Bug where for-loop breaks into finally statement. No exception raised
 def insertLabels(labels):
     try:
         connect = db.connect(DB_PATH)
         cur = connect.cursor()
         
         count = 0
-        print(f"START: {labels}")
         for label in labels:
             #check if label exist
-            cur.execute("SELECT label FROM labels WHERE label = ?", (label) ) 
-            print(cur.fetchall())
-            if len(cur.fetchall()) != 0:
+            cur.execute(f"SELECT label FROM labels WHERE label = '{label}';") 
+            if len(cur.fetchall()) == 0:
                 #insert
-                cur.execute("INSERT INTO labels VALUES(?);", (label) )
+                cur.execute(f"INSERT INTO labels VALUES('{label}');")
                 count += 1
-        print("END")
+        connect.commit()
     except db.OperationalError as e:
         print(e)
         raise
     finally:
         connect.close()
         return count
+    
+
+
+#===== verify =======================================
+# Accepts a list of image ids and sets their verified
+# code to 1.
+# 
+# PARAM: imgIDList : [ id<Int> ]
+#
+# RETURNS: int, number of successful verifications
+#=====================================================
+def verify(imgIDList):
+    if (type(imgIDList) == list and len(imgIDList) == 0): 
+        return 0
+    try:
+        connect = db.connect(DB_PATH)
+        cur = connect.cursor()
+        queryList = "("
+
+        #convert list into string list for sql
+        for i in range( len(imgIDList) ):
+            queryList += str(imgIDList[i])
+            if i != len(imgIDList) - 1:
+                queryList += ","
+        queryList += ");"
+
+        #Update verify tag of images in DB
+        cur.execute(f"UPDATE images SET verified = 1 WHERE id IN {queryList}")
+
+        #get count of successful updates
+        select("id", "images", f"verified = 1 AND id IN {queryList}")
+        count = len(cur.fetchall())
+
+        connect.commit()
+    except db.OperationalError as e:
+        print(e)
+        connect.rollback()
+        raise
+    finally:
+        connect.close()
+        return count if count is not None else 0
 
 
 

@@ -30,24 +30,10 @@ def testSqlite():
 def testSql():
     runScript("initTestDB")
     print( select("*", "labels") )
-    """
-    print( select("*", "models") )
-    insertImages([
-        {
-            "imageURL": "12345.png",
-            "label": "bird"
-        },
-        {
-            "imageURL": "67890.png",
-            "label": "frog"
-        }
-    ])
-    print( select('*', 'images') )
-    """
-    print( insertLabels(['dino', 'bird']) )
-    print( select("*", "labels") )
-    setRelease("1.0.0")
-    print( select("*", "models", "release = 1") )
+    print( select("*", "images") )
+    
+    print( verify() )
+    print( updateImages() )
 
     
 
