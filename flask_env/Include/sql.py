@@ -42,7 +42,6 @@ DB_PATH = "./db/test.db"
 
 
 
-
 def select(cols, table, where=""):
     try:
         connect = db.connect(DB_PATH)
@@ -55,10 +54,7 @@ def select(cols, table, where=""):
                 strCols += (", " if i > 0 else "") + cols[i]
             cols = strCols
 
-        def _temp():
-            return "WHERE " + where if len(where) > 0 else ""
-
-        cur.execute(f"SELECT {cols} FROM {table} {_temp()};")
+        cur.execute(f"SELECT {cols} FROM {table} {'WHERE ' + where if len(where) > 0 else ''};")
         return cur.fetchall()
     except db.OperationalError as e:
         print(e)
@@ -72,29 +68,39 @@ def select(cols, table, where=""):
 # Accepts new images with labels and inserts them into DB.
 # 
 # PARAM: imgs : [ {imageURl, label} ]
+#
+# RETURNS: int, number of successful inserts
 #=====================================================
 def insertImages(imgs):
+    count = 0
     try:
         connect = db.connect(DB_PATH)
         cur = connect.cursor()
+        wherequery = "("
 
         for ele in imgs:
-            cur.execute("INSERT INTO images (imgURL, label) VALUES(?, ?);", (ele["imageURL"], ele["label"]) )
+            cur.execute("INSERT INTO images (imgURL, label) VALUES(?, ?);", (ele["imgURL"], ele["label"]) )
+            wherequery += f"'{ele['imgURL']}',"
+        wherequery = wherequery[:-1] + ");"
+
+        cur.execute(f"SELECT id FROM images WHERE imgURL IN {wherequery}")
+        count = len(cur.fetchall())
 
         connect.commit()
     except db.OperationalError as e:
         print(e)
         connect.rollback()
+        count = 0
         raise
     finally:
         connect.close()
+        return count
 
 
-#   TODO: Test
 #===== updateImages ==================================
 # Attempts a list of string labels and inserts to DB.
 # 
-# PARAM: labels : [ {"id": int, "label": string, ...} ]
+# PARAM: imgList : [ {"id": int, "label": string, ...} ]
 #
 # RETURNS: None
 #=====================================================
@@ -104,7 +110,7 @@ def updateImages(imgList):
         cur = connect.cursor()
 
         for img in imgList:
-            cur.execute(f"UPDATE images SET label = '{img["label"]}' WHERE id = {img["id"]};")
+            cur.execute(f"UPDATE images SET label = '{img['label']}' WHERE id = {img['id']};")
         
         connect.commit()
     except db.OperationalError as e:
@@ -127,6 +133,10 @@ def insertLabels(labels):
         connect = db.connect(DB_PATH)
         cur = connect.cursor()
         
+        #single input
+        if type(labels) == str:
+            labels = [ labels ]
+
         count = 0
         for label in labels:
             #check if label exist
@@ -138,6 +148,8 @@ def insertLabels(labels):
         connect.commit()
     except db.OperationalError as e:
         print(e)
+        connect.rollback()
+        count = 0
         raise
     finally:
         connect.close()
@@ -147,20 +159,34 @@ def insertLabels(labels):
 
 #===== verify =======================================
 # Accepts a list of image ids and sets their verified
-# code to 1.
+# code to 1 by default, or the other codes specified by a param.
 # 
-# PARAM: imgIDList : [ id<Int> ]
+# PARAM: imgIDList : [ id<Int> ] | id<Int>
+#        status : Int
+#           * 0 : unverified
+#           * 1 : verified
+#           * 2 : trained
 #
 # RETURNS: int, number of successful verifications
 #=====================================================
-def verify(imgIDList):
+def verify(imgIDList, status=1):
     if (type(imgIDList) == list and len(imgIDList) == 0): 
         return 0
+    count = None
     try:
         connect = db.connect(DB_PATH)
         cur = connect.cursor()
         queryList = "("
 
+        #single inputs
+        if type(imgIDList) == int:
+            cur.execute(f"UPDATE images SET verified = {status} WHERE id = {imgIDList};")
+            cur.execute(f"SELECT id FROM images WHERE verified = {status} AND id = {imgIDList};")
+            count = len(cur.fetchall())
+            connect.commit()
+            return count
+            
+            
         #convert list into string list for sql
         for i in range( len(imgIDList) ):
             queryList += str(imgIDList[i])
@@ -169,10 +195,10 @@ def verify(imgIDList):
         queryList += ");"
 
         #Update verify tag of images in DB
-        cur.execute(f"UPDATE images SET verified = 1 WHERE id IN {queryList}")
+        cur.execute(f"UPDATE images SET verified = {int(status)} WHERE id IN {queryList}")
 
         #get count of successful updates
-        select("id", "images", f"verified = 1 AND id IN {queryList}")
+        cur.execute(f"SELECT id FROM images WHERE verified = {int(status)} AND id IN {queryList}")
         count = len(cur.fetchall())
 
         connect.commit()
@@ -214,7 +240,6 @@ def setRelease(verNum):
             SELECT * FROM models WHERE release = 1;
         """)
         result = cur.fetchall()
-        print(result)
         if len(result) == 1 and result[0][0] == verNum:
             return 0
         else:

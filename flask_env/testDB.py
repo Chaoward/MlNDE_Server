@@ -31,12 +31,43 @@ def testSql():
     runScript("initTestDB")
     print( select("*", "labels") )
     print( select("*", "images") )
-    
-    print( verify() )
-    print( updateImages() )
+
+    print( updateImages([{'id': 1, 'label': 'frog'}, {'id': 2, 'label': 'bird'}]) )
+    print( select("id, imgURL, label", "images") )
+
+
+def testAll():
+    runScript("initTestDB")
+
+    outTest(select("imgURL", "images"), [('chicken.png',), ('dino.png',), ('dog.png',)])
+    outTest(select("imgURL", "images", "id = 2"), [('dino.png',)])
+
+    outTest(insertImages([{'imgURL': 'soup123.png', 'label': 'cat'}]), 1)
+    outTest(insertLabels(['tag1', 'tag2', 'tag3']), 3)
+    outTest(insertLabels('tag4'), 1)
+
+    outTest(verify([2,3]), 2)
+    outTest(len(select("id", "images", "verified = 1")), 2)
+
+    outTest(verify([1], 2), 1)
+    outTest(len(select("id", "images", "verified = 2")), 1)
+
+
+
+def outTest(output, expected):
+    if output == expected:
+        print(True)
+    else:
+        print(f"""===== TEST FAIL ===================
+            RETURNED : {output}
+            EXPECTED : {expected}
+===================================
+    """)
+
 
     
 
 #////////// EXECUTE //////////////////////////
-testSql()
+#testSql()
 #testSqlite()
+testAll()
