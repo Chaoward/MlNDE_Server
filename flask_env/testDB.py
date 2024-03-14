@@ -28,12 +28,11 @@ def testSqlite():
 
 
 def testSql():
-    runScript("initTestDB")
-    print( select("*", "labels") )
     print( select("*", "images") )
-
-    print( updateImages([{'id': 1, 'label': 'frog'}, {'id': 2, 'label': 'bird'}]) )
-    print( select("id, imgURL, label", "images") )
+    print( select("*", "labels") )
+    print( select("*", "models") )
+    print( select("*", "model_label") )
+    
 
 
 def testAll():
@@ -68,6 +67,6 @@ def outTest(output, expected):
     
 
 #////////// EXECUTE //////////////////////////
-#testSql()
+testSql()
 #testSqlite()
-testAll()
+#testAll()

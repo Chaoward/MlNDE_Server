@@ -1,7 +1,10 @@
 import sqlite3 as db
 
+DEBUG = True
+
 SQL_SCRIPT_DIR = "./db/sql_scripts/"
-DB_PATH = "./db/test.db"
+DB_PATH = "./db/main.db"
+
 
 ##### TABLES ######################################################################  
 # 
@@ -268,3 +271,10 @@ def runScript(scriptName):
         raise
     finally:
         connect.close()
+
+
+#///// DEBUG SETUP ///////////////
+runScript("initDB")
+if DEBUG:
+    runScript("copyDB")
+    DB_PATH = "./db/debug_copy.db"
