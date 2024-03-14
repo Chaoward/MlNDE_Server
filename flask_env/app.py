@@ -73,3 +73,27 @@ def serveImage(filename):
 
 
 #===== MODELS ==================================================
+@app.route("/models", methods=["GET"])
+def getModels():
+    try:
+        models = sql.select("*", "models")
+        return jsonify({"models": models})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+    
+@app.route("/model/release", methods=["POST"])
+def setRelease():
+    try:
+        data = request.json
+        version_num = data.get("versionNum")
+
+        result = sql.setRelease(version_num)
+
+        if result == 0:
+            return jsonify({"success": f"Model {version_num} is now marked as the release version"}), 200
+        elif result == 1:
+            return jsonify({"error": f"Model {version_num} not found"}), 404
+        elif result == -1:
+            return jsonify({"error": f"Model {version_num} is already the release version"}), 400
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
