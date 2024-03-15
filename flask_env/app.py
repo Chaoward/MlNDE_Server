@@ -1,10 +1,12 @@
 from flask import Flask, send_from_directory, request, jsonify
 from Include import sql
+from werkzeug.utils import secure_filename
+import os
 
 
 app = Flask(__name__)
-UPLOAD_FOLDER = './uploads'
-
+UPLOAD_FOLDER = "./db/images/"
+app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 
 
 # images, labels, models
@@ -23,17 +25,17 @@ def handleLabels():
             return jsonify(labels)
         except Exception as e:
             return jsonify({"error": str(e)}), 500
-    elif request.method == "POST":
+    elif request.method == "POST":  
         try:
             data = request.json
             labels = data.get("labels", [])
             if not labels:
-                return jsonify({"error": "No labels provided"}), 400
+                return jsonify({"success": False, "error": "No labels provided"}), 400
             
             count = sql.insertLabels(labels)    
-            return jsonify({"success": f"{count} labels inserted successfully"})
+            return jsonify({"success": True, "message": f"{count} labels inserted successfully"})
         except Exception as e:
-            return jsonify({"error": str(e)}), 500
+            return jsonify({"success": False, "error": str(e)}), 500
 
 
 #===== IMAGES ==================================================
@@ -42,29 +44,46 @@ def handleLabels():
 def handleUnverified():
     if request.method == "GET":
         try:
-            images = sql.select("*", "images", where="verified=0")
+            images_data = sql.select("*", "images", where="verified=0")
+            images = []
+            for img_data in images_data:
+                img_dict = {
+                    "imgURL": img_data[0],
+                    "label": img_data[1],
+                    "verified": img_data[2],
+                    "id": img_data[3]
+                }
+                images.append(img_dict)
             return jsonify({"images": images})
         except Exception as e:
-            return jsonify({"error": str(e)}), 500
+            return jsonify({"success": False, "error": str(e)}), 500
     elif request.method == "POST":
-        try:
-            data = request.json
-            imgs = data.get("images", [])
-            if not imgs:
-                return jsonify({"error": "No images provided"}), 400
-            
-            sql.insertImages(imgs)
-            return jsonify({"success": "Images uploaded successfully"})
-        except Exception as e:
-            return jsonify({"error": str(e)}), 500
+        if 'file' not in request.files:
+            return jsonify({"success": False, "error": "No file part"}), 400
+    
+        file = request.files['file']
+    
+        if file.filename == '':
+            return jsonify({"success": False, "error": "No selected file"}), 400
+    
+        if file:
+            filename = secure_filename(file.filename)
+            file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+            file.save(file_path)  # Save the uploaded file
+        
+            # Insert image details into the database
+            label = request.form.get('label')
+            sql.insertImages([{'imgURL': filename, 'label': label}])
+        
+            return jsonify({"success": True, "message": "File uploaded successfully"}), 200
 
 @app.route("/images/verified", methods=["GET", "POST"])
 def handleVerified():
     try:
         images = sql.select("*", "images", where="verified=1")
-        return jsonify({"images": images})
+        return jsonify({"success": True, "images": images})
     except Exception as e:
-        return jsonify({"error": str(e)}), 500
+        return jsonify({"success": False, "error": str(e)}), 500
 
 @app.route("/images/<filename>")
 def serveImage(filename):
