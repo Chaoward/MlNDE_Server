@@ -1,4 +1,5 @@
-from flask import Flask, send_from_directory, request, jsonify
+from flask import Flask, send_from_directory, request, jsonify, send_file
+from flask_cors import CORS
 from Include import sql
 from werkzeug.utils import secure_filename
 import os
@@ -7,7 +8,7 @@ import os
 app = Flask(__name__)
 UPLOAD_FOLDER = "./db/images/"
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
-
+CORS(app)
 
 # images, labels, models
 
@@ -38,6 +39,7 @@ def handleLabels():
 
 
 #===== IMAGES ==================================================
+#   TODO : edit POST to fit sql insertImages
 # image objects { id, imgURL, label }
 @app.route("/images/unverified", methods=["GET", "POST"])
 def handleUnverified():
@@ -99,12 +101,13 @@ def handleVerified():
     except Exception as e:
         return jsonify({"success": False, "error": str(e)}), 500
 
+
 @app.route("/images/<filename>")
 def serveImage(filename):
-    return send_from_directory(app.static_folder, filename)
+    return send_file(f"./db/images/{filename}")
 
 
-
+# TODO : implement file size return 
 #===== MODELS ==================================================
 @app.route("/models", methods=["GET"])
 def getModels():
@@ -119,7 +122,8 @@ def getModels():
                 "release": mod[1] == 1,
                 "imgsTrained": mod[2],
                 "id": mod[3],
-                "labels": list( map(lambda x: x[0], mod_labals) )
+                "labels": list( map(lambda x: x[0], mod_labals) ),
+                "size": "100MB"
             })
 
         return jsonify(payload)
