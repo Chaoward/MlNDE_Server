@@ -22,18 +22,17 @@ def handleLabels():
     if request.method == "GET":
         try:
             labels = sql.select("label", "labels")
-            return jsonify(labels)
+            return jsonify( list( map(lambda x: x[0], labels) ) )
         except Exception as e:
             return jsonify({"error": str(e)}), 500
     elif request.method == "POST":  
         try:
-            data = request.json
-            labels = data.get("labels", [])
-            if not labels:
+            labels = request.json
+            if type(labels) != list:
                 return jsonify({"success": False, "error": "No labels provided"}), 400
             
             count = sql.insertLabels(labels)    
-            return jsonify({"success": True, "message": f"{count} labels inserted successfully"})
+            return jsonify({"success": True, "count": count})
         except Exception as e:
             return jsonify({"success": False, "error": str(e)}), 500
 
@@ -44,17 +43,16 @@ def handleLabels():
 def handleUnverified():
     if request.method == "GET":
         try:
-            images_data = sql.select("*", "images", where="verified=0")
+            images_data = sql.select("imgURL, label, id", "images", where="verified=0")
             images = []
             for img_data in images_data:
                 img_dict = {
                     "imgURL": img_data[0],
                     "label": img_data[1],
-                    "verified": img_data[2],
-                    "id": img_data[3]
+                    "id": img_data[2]
                 }
                 images.append(img_dict)
-            return jsonify({"images": images})
+            return jsonify(images)
         except Exception as e:
             return jsonify({"success": False, "error": str(e)}), 500
     elif request.method == "POST":
@@ -76,6 +74,22 @@ def handleUnverified():
             sql.insertImages([{'imgURL': filename, 'label': label}])
         
             return jsonify({"success": True, "message": "File uploaded successfully"}), 200
+        
+
+
+@app.route("/images/unverified/verify", methods=["PUT"])
+def verify():
+    if request.method != "PUT":
+        return jsonify({'success': False, 'error': 'PUT request ONLY.'})
+    try:
+        imgList = request.json
+        sql.updateImages(imgList)
+        count = sql.verify( list(map(lambda img: img['id'], imgList)) )
+        return jsonify( {'success': True, 'count': count} if count != 0 else {'success': False, 'error': "Problem occured while verifying images"} )
+    except Exception as e:
+        return jsonify({'success': False, "error": str(e)}), 500
+
+
 
 @app.route("/images/verified", methods=["GET", "POST"])
 def handleVerified():
@@ -96,23 +110,34 @@ def serveImage(filename):
 def getModels():
     try:
         models = sql.select("*", "models")
-        return jsonify({"models": models})
+        payload = []
+        
+        for mod in models:
+            mod_labals = sql.select("label", "model_label", f"modelID={mod[3]}")
+            payload.append({
+                "versionNum": mod[0],
+                "release": mod[1] == 1,
+                "imgsTrained": mod[2],
+                "id": mod[3],
+                "labels": list( map(lambda x: x[0], mod_labals) )
+            })
+
+        return jsonify(payload)
     except Exception as e:
         return jsonify({"error": str(e)}), 500
     
-@app.route("/model/release", methods=["POST"])
+@app.route("/models/release", methods=["PUT"])
 def setRelease():
     try:
-        data = request.json
-        version_num = data.get("versionNum")
+        version_id = request.json["verID"]
 
-        result = sql.setRelease(version_num)
+        result = sql.setRelease(version_id)
 
         if result == 0:
-            return jsonify({"success": f"Model {version_num} is now marked as the release version"}), 200
+            return jsonify({"success": True}), 200
         elif result == 1:
-            return jsonify({"error": f"Model {version_num} not found"}), 404
+            return jsonify({"success": False, "error": f"Model with id : {version_id} not found"}), 404
         elif result == -1:
-            return jsonify({"error": f"Model {version_num} is already the release version"}), 400
+            return jsonify({"success": False, "error": f"Model with id : {version_id} is already the release version"}), 400
     except Exception as e:
         return jsonify({"error": str(e)}), 500

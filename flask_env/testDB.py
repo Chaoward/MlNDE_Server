@@ -28,17 +28,12 @@ def testSqlite():
 
 
 def testSql():
-    print( select("*", "images") )
-    print( select("*", "labels") )
-    print( select("*", "models") )
-    print( select("*", "model_label") )
+    outTest(setRelease(4), -1)
+    outTest(setRelease(2), 0)
     
 
 
 def testAll():
-    changeDB("testDB")
-    runScript("initTestDB")
-
     outTest(select("imgURL", "images"), [('chicken.png',), ('dino.png',), ('dog.png',)])
     outTest(select("imgURL", "images", "id = 2"), [('dino.png',)])
 

@@ -1,6 +1,7 @@
 import sqlite3 as db
 
 DEBUG = True
+USE_TEST_DB = True
 
 IMAGE_PATH = "./db/images/"
 SQL_SCRIPT_DIR = "./db/sql_scripts/"
@@ -40,7 +41,7 @@ DB_PATH = "./db/main.db"
 # many-to-many table for models trained with new labels
 # COLUMNS
 #   | modelID INTEGER NOT NULL
-#   | labelID INTEGER NOT NULL
+#   | label TEXT NOT NULL
 #######################################################################################  
 
 
@@ -224,31 +225,32 @@ def verify(imgIDList, status=1):
 # Updates models table to mark a target version
 # and unmarks the current release version.
 # 
+# PARAMS: int, id of the model version
+# 
 # RETURNS: int
 #   0 : Success
 #   1 : Failed to find target version
 #  -1 : target version already the release version
 #======================================================
-def setRelease(verNum):
+def setRelease(verID):
     try:
         connect = db.connect(DB_PATH)
         cur = connect.cursor()
         
-        cur.execute(f"SELECT release FROM models WHERE versionNum = '{verNum}';")
+        cur.execute(f"SELECT release FROM models WHERE id = {verID};")
         result = cur.fetchall()
         if len(result) == 0:    #check if target version exist
             return 1
-        elif result[0] == 1:    #check if target version is already release ver
+        elif result[0][0] == 1:    #check if target version is already release ver
             return -1
             
         # update release mark
-        cur.executescript(f"""
-            UPDATE models SET release = 0 WHERE release = 1;
-            UPDATE models SET release = 1 WHERE versionNum = '{verNum}';
-            SELECT * FROM models WHERE release = 1;
-        """)
+        cur.execute("UPDATE models SET release = 0 WHERE release = 1;")
+        cur.execute(f"UPDATE models SET release = 1 WHERE id = {verID};")
+        cur.execute("SELECT id FROM models WHERE release = 1;")
+
         result = cur.fetchall()
-        if len(result) == 1 and result[0][0] == verNum:
+        if len(result) == 1 and result[0][0] == verID:
             return 0
         else:
             return 1
@@ -256,6 +258,7 @@ def setRelease(verNum):
         print(e)
         raise
     finally:
+        connect.commit()
         connect.close()
 
 
@@ -298,8 +301,13 @@ def changeDB(database):
         raise
 
 
-#///// DEBUG SETUP ///////////////
-runScript("initDB")
+#///// DATABASE SETUP ///////////////
+if USE_TEST_DB:
+    DB_PATH = "./db/test.db"
+    runScript("initTestDB")
+else:
+    runScript("initDB")
+
 if DEBUG:
     runScript("copyDB")
     DB_PATH = "./db/debug_copy.db"
