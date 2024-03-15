@@ -36,6 +36,7 @@ def testSql():
 
 
 def testAll():
+    changeDB("testDB")
     runScript("initTestDB")
 
     outTest(select("imgURL", "images"), [('chicken.png',), ('dino.png',), ('dog.png',)])

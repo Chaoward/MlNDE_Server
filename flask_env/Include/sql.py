@@ -2,6 +2,7 @@ import sqlite3 as db
 
 DEBUG = True
 
+IMAGE_PATH = "./db/images/"
 SQL_SCRIPT_DIR = "./db/sql_scripts/"
 DB_PATH = "./db/main.db"
 
@@ -66,15 +67,16 @@ def select(cols, table, where=""):
         connect.close()
 
 
-
+# TODO : TEST
 #===== insertImages ==================================
 # Accepts new images with labels and inserts them into DB.
 # 
-# PARAM: imgs : [ {imageURl, label} ]
+# PARAM: imgs : [ {imgURL, label, file} ]
 #
 # RETURNS: int, number of successful inserts
 #=====================================================
-def insertImages(imgs):
+def insertImages(imgs, noNewFile=False):
+    from os import path
     count = 0
     try:
         connect = db.connect(DB_PATH)
@@ -82,6 +84,9 @@ def insertImages(imgs):
         wherequery = "("
 
         for ele in imgs:
+            if not noNewFile:
+                #save image in images folders
+                ele['file'].save(path.join(IMAGE_PATH, ele["imgURL"] ))
             cur.execute("INSERT INTO images (imgURL, label) VALUES(?, ?);", (ele["imgURL"], ele["label"]) )
             wherequery += f"'{ele['imgURL']}',"
         wherequery = wherequery[:-1] + ");"
@@ -92,8 +97,7 @@ def insertImages(imgs):
         connect.commit()
     except db.OperationalError as e:
         print(e)
-        connect.rollback()
-        count = 0
+        connect.commit()
         raise
     finally:
         connect.close()
@@ -101,7 +105,8 @@ def insertImages(imgs):
 
 
 #===== updateImages ==================================
-# Attempts a list of string labels and inserts to DB.
+# Accepts a list of modified images and updates them
+# in the DB.
 # 
 # PARAM: imgList : [ {"id": int, "label": string, ...} ]
 #
@@ -125,7 +130,7 @@ def updateImages(imgList):
 
 
 #===== insertLabels ==================================
-# Attempts a list of string labels and inserts to DB.
+# Accepts list of lavels and inserts them into the DB.
 # 
 # PARAM: labels : [ label<String> ]
 #
@@ -215,7 +220,7 @@ def verify(imgIDList, status=1):
 
 
 
-#===== setRelease ====================================
+#===== setRelease =====================================
 # Updates models table to mark a target version
 # and unmarks the current release version.
 # 
@@ -254,7 +259,12 @@ def setRelease(verNum):
         connect.close()
 
 
-#===== runScript =========================
+#===== runScript =====================================
+# Runs a sql script from the sql_scripts folder
+# 
+# PARAM: scriptName : string, filename of the script
+#                             without file extension 
+#====================================================
 def runScript(scriptName):
     try:
         connect = db.connect(DB_PATH)
@@ -271,6 +281,21 @@ def runScript(scriptName):
         raise
     finally:
         connect.close()
+
+
+#===== changeDB ===========================
+# changes the DB_PATH to specified DB file
+#==========================================
+def changeDB(database):
+    from os import path
+    global DB_PATH
+    try:
+        if not path.exists(f"./db/{database}.db"):
+            raise FileNotFoundError
+        DB_PATH = f"./db/{database}.db"
+    except FileNotFoundError as e:
+        print(e)
+        raise
 
 
 #///// DEBUG SETUP ///////////////
