@@ -1,7 +1,51 @@
 import sqlite3 as db
 
+DEBUG = True
+USE_TEST_DB = True
+
+IMAGE_PATH = "./db/images/"
 SQL_SCRIPT_DIR = "./db/sql_scripts/"
-DB_PATH = "./db/test.db"
+DB_PATH = "./db/main.db"
+
+
+##### TABLES ######################################################################  
+# 
+#///// images /////
+# Holds image filenames pair with their labels.
+# Tagged appropiately whither they are unverfied, verfied, or trained.
+# COLUMNS
+#   | imgURL TEXT : File name of image on system
+#   | label TEXT  : string label that exist on the labels table
+#   | verified INT DEFAULT 0  : status code of the following...
+#       * 0 : unverfied
+#       * 1 : verfied
+#       * 2 : trained
+#   | id INTEGER PRIMARY KEY
+# 
+# 
+#///// labels /////
+# COLUMNS
+#   | label TEXT PRIMARY KEY : String label
+# 
+# 
+#///// models /////
+# Holds information of each model 
+# COLUMNS
+#   | versionNum TEXT : string version number in a major.minor.patch form. EX: 1.1.1
+#   | release BIT DEFAULT 0 : boolean whither the model is the release version
+#   | imgsTrained INT DEFAULT 0 : Number of images used to train this model
+#   | id INTEGER PRIMARY KEY
+# 
+# 
+#///// model_label /////
+# many-to-many table for models trained with new labels
+# COLUMNS
+#   | modelID INTEGER NOT NULL
+#   | label TEXT NOT NULL
+#######################################################################################  
+
+
+
 
 def select(cols, table, where=""):
     try:
@@ -15,10 +59,7 @@ def select(cols, table, where=""):
                 strCols += (", " if i > 0 else "") + cols[i]
             cols = strCols
 
-        def _temp():
-            return "WHERE " + where if len(where) > 0 else ""
-
-        cur.execute(f"SELECT {cols} FROM {table} {_temp()};")
+        cur.execute(f"SELECT {cols} FROM {table} {'WHERE ' + where if len(where) > 0 else ''};")
         return cur.fetchall()
     except db.OperationalError as e:
         print(e)
@@ -27,26 +68,60 @@ def select(cols, table, where=""):
         connect.close()
 
 
-
+# TODO : TEST
 #===== insertImages ==================================
-# Inserts new images with labels into DB.
+# Accepts new images with labels and inserts them into DB.
 # 
-# PARAM: imgs : [ {imageURl, label} ]
+# PARAM: imgs : [ {imgURL, label, file} ]
+#
+# RETURNS: int, number of successful inserts
 #=====================================================
-def insertImages(imgs):
+def insertImages(imgs, noNewFile=False):
+    from os import path
+    count = 0
+    try:
+        connect = db.connect(DB_PATH)
+        cur = connect.cursor()
+        wherequery = "("
+
+        for ele in imgs:
+            if not noNewFile:
+                #save image in images folders
+                ele['file'].save(path.join(IMAGE_PATH, ele["imgURL"] ))
+            cur.execute("INSERT INTO images (imgURL, label) VALUES(?, ?);", (ele["imgURL"], ele["label"]) )
+            wherequery += f"'{ele['imgURL']}',"
+        wherequery = wherequery[:-1] + ");"
+
+        cur.execute(f"SELECT id FROM images WHERE imgURL IN {wherequery}")
+        count = len(cur.fetchall())
+
+        connect.commit()
+    except db.OperationalError as e:
+        print(e)
+        connect.commit()
+        raise
+    finally:
+        connect.close()
+        return count
+
+
+#===== updateImages ==================================
+# Accepts a list of modified images and updates them
+# in the DB.
+# 
+# PARAM: imgList : [ {"id": int, "label": string, ...} ]
+#
+# RETURNS: None
+#=====================================================
+def updateImages(imgList):
     try:
         connect = db.connect(DB_PATH)
         cur = connect.cursor()
 
-        for ele in imgs:
-            cur.execute("INSERT INTO images (imgURL, label) VALUES(?, ?);", (ele["imageURL"], ele["label"]) )
-
-        #update verification table
-        cur.executescript("""
-            INSERT INTO verification (imageID)
-            SELECT i.id FROM images i LEFT JOIN verification v ON i.id = v.imageID
-            WHERE v.imageID IS NULL;
-        """)
+        for img in imgList:
+            cur.execute(f"UPDATE images SET label = '{img['label']}' WHERE id = {img['id']};")
+        
+        connect.commit()
     except db.OperationalError as e:
         print(e)
         connect.rollback()
@@ -55,70 +130,127 @@ def insertImages(imgs):
         connect.close()
 
 
-
 #===== insertLabels ==================================
-# Attempts a list of string labels and inserts to DB.
+# Accepts list of lavels and inserts them into the DB.
 # 
 # PARAM: labels : [ label<String> ]
 #
 # RETURNS: int, number of successful inserts
 #=====================================================
-        # TODO: Fix Bug where for-loop breaks into finally statement. No exception raised
 def insertLabels(labels):
     try:
         connect = db.connect(DB_PATH)
         cur = connect.cursor()
         
+        #single input
+        if type(labels) == str:
+            labels = [ labels ]
+
         count = 0
-        print(f"START: {labels}")
         for label in labels:
             #check if label exist
-            cur.execute("SELECT label FROM labels WHERE label = ?", (label) ) 
-            print(cur.fetchall())
-            if len(cur.fetchall()) != 0:
+            cur.execute(f"SELECT label FROM labels WHERE label = '{label}';") 
+            if len(cur.fetchall()) == 0:
                 #insert
-                cur.execute("INSERT INTO labels VALUES(?);", (label) )
+                cur.execute(f"INSERT INTO labels VALUES('{label}');")
                 count += 1
-        print("END")
+        connect.commit()
     except db.OperationalError as e:
         print(e)
+        connect.rollback()
+        count = 0
         raise
     finally:
         connect.close()
         return count
+    
+
+
+#===== verify =======================================
+# Accepts a list of image ids and sets their verified
+# code to 1 by default, or the other codes specified by a param.
+# 
+# PARAM: imgIDList : [ id<Int> ] | id<Int>
+#        status : Int
+#           * 0 : unverified
+#           * 1 : verified
+#           * 2 : trained
+#
+# RETURNS: int, number of successful verifications
+#=====================================================
+def verify(imgIDList, status=1):
+    if (type(imgIDList) == list and len(imgIDList) == 0): 
+        return 0
+    count = None
+    try:
+        connect = db.connect(DB_PATH)
+        cur = connect.cursor()
+        queryList = "("
+
+        #single inputs
+        if type(imgIDList) == int:
+            cur.execute(f"UPDATE images SET verified = {status} WHERE id = {imgIDList};")
+            cur.execute(f"SELECT id FROM images WHERE verified = {status} AND id = {imgIDList};")
+            count = len(cur.fetchall())
+            connect.commit()
+            return count
+            
+            
+        #convert list into string list for sql
+        for i in range( len(imgIDList) ):
+            queryList += str(imgIDList[i])
+            if i != len(imgIDList) - 1:
+                queryList += ","
+        queryList += ");"
+
+        #Update verify tag of images in DB
+        cur.execute(f"UPDATE images SET verified = {int(status)} WHERE id IN {queryList}")
+
+        #get count of successful updates
+        cur.execute(f"SELECT id FROM images WHERE verified = {int(status)} AND id IN {queryList}")
+        count = len(cur.fetchall())
+
+        connect.commit()
+    except db.OperationalError as e:
+        print(e)
+        connect.rollback()
+        raise
+    finally:
+        connect.close()
+        return count if count is not None else 0
 
 
 
-#===== setRelease ====================================
+#===== setRelease =====================================
 # Updates models table to mark a target version
 # and unmarks the current release version.
+# 
+# PARAMS: int, id of the model version
 # 
 # RETURNS: int
 #   0 : Success
 #   1 : Failed to find target version
 #  -1 : target version already the release version
 #======================================================
-def setRelease(verNum):
+def setRelease(verID):
     try:
         connect = db.connect(DB_PATH)
         cur = connect.cursor()
         
-        cur.execute(f"SELECT release FROM models WHERE versionNum = '{verNum}';")
+        cur.execute(f"SELECT release FROM models WHERE id = {verID};")
         result = cur.fetchall()
         if len(result) == 0:    #check if target version exist
             return 1
-        elif result[0] == 1:    #check if target version is already release ver
+        elif result[0][0] == 1:    #check if target version is already release ver
             return -1
             
         # update release mark
-        cur.executescript(f"""
-            UPDATE models SET release = 0 WHERE release = 1;
-            UPDATE models SET release = 1 WHERE versionNum = '{verNum}';
-            SELECT * FROM models WHERE release = 1;
-        """)
+        cur.execute("UPDATE models SET release = 0 WHERE release = 1;")
+        cur.execute(f"UPDATE models SET release = 1 WHERE id = {verID};")
+        cur.execute("SELECT id FROM models WHERE release = 1;")
+
         result = cur.fetchall()
-        print(result)
-        if len(result) == 1 and result[0][0] == verNum:
+        if len(result) == 1 and result[0][0] == verID:
             return 0
         else:
             return 1
@@ -126,10 +258,16 @@ def setRelease(verNum):
         print(e)
         raise
     finally:
+        connect.commit()
         connect.close()
 
 
-#===== runScript =========================
+#===== runScript =====================================
+# Runs a sql script from the sql_scripts folder
+# 
+# PARAM: scriptName : string, filename of the script
+#                             without file extension 
+#====================================================
 def runScript(scriptName):
     try:
         connect = db.connect(DB_PATH)
@@ -146,3 +284,30 @@ def runScript(scriptName):
         raise
     finally:
         connect.close()
+
+
+#===== changeDB ===========================
+# changes the DB_PATH to specified DB file
+#==========================================
+def changeDB(database):
+    from os import path
+    global DB_PATH
+    try:
+        if not path.exists(f"./db/{database}.db"):
+            raise FileNotFoundError
+        DB_PATH = f"./db/{database}.db"
+    except FileNotFoundError as e:
+        print(e)
+        raise
+
+
+#///// DATABASE SETUP ///////////////
+if USE_TEST_DB:
+    DB_PATH = "./db/test.db"
+    runScript("initTestDB")
+else:
+    runScript("initDB")
+
+if DEBUG:
+    runScript("copyDB")
+    DB_PATH = "./db/debug_copy.db"
