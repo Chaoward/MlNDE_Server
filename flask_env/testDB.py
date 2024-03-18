@@ -28,29 +28,41 @@ def testSqlite():
 
 
 def testSql():
-    runScript("initTestDB")
-    print( select("*", "labels") )
-    """
-    print( select("*", "models") )
-    insertImages([
-        {
-            "imageURL": "12345.png",
-            "label": "bird"
-        },
-        {
-            "imageURL": "67890.png",
-            "label": "frog"
-        }
-    ])
-    print( select('*', 'images') )
-    """
-    print( insertLabels(['dino', 'bird']) )
-    print( select("*", "labels") )
-    setRelease("1.0.0")
-    print( select("*", "models", "release = 1") )
+    outTest(setRelease(4), -1)
+    outTest(setRelease(2), 0)
+    
+
+
+def testAll():
+    outTest(select("imgURL", "images"), [('chicken.png',), ('dino.png',), ('dog.png',)])
+    outTest(select("imgURL", "images", "id = 2"), [('dino.png',)])
+
+    outTest(insertImages([{'imgURL': 'soup123.png', 'label': 'cat'}]), 1)
+    outTest(insertLabels(['tag1', 'tag2', 'tag3']), 3)
+    outTest(insertLabels('tag4'), 1)
+
+    outTest(verify([2,3]), 2)
+    outTest(len(select("id", "images", "verified = 1")), 2)
+
+    outTest(verify([1], 2), 1)
+    outTest(len(select("id", "images", "verified = 2")), 1)
+
+
+
+def outTest(output, expected):
+    if output == expected:
+        print(True)
+    else:
+        print(f"""===== TEST FAIL ===================
+            RETURNED : {output}
+            EXPECTED : {expected}
+===================================
+    """)
+
 
     
 
 #////////// EXECUTE //////////////////////////
 testSql()
 #testSqlite()
+#testAll()

@@ -1,0 +1,11 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "TestDB",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "F:\\Git\\MlNDE_Server\\flask_env\\testDB.py"
+        }
+    ]
+}
