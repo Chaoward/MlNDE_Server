@@ -1,7 +1,8 @@
 
 CREATE TABLE IF NOT EXISTS images (
     imgURL TEXT,
-    label TEXT,
+    sysLabel TEXT,
+    userLabel TEXT,
     verified INT DEFAULT 0,
     id INTEGER PRIMARY KEY
 );
@@ -9,7 +10,8 @@ CREATE TABLE IF NOT EXISTS images (
 
 
 CREATE TABLE IF NOT EXISTS labels (
-    label TEXT PRIMARY KEY
+    classID INT,
+    label TEXT
 );
 
 
