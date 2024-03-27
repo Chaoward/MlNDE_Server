@@ -45,7 +45,6 @@ def handleLabels():
 
 
 #===== IMAGES ==================================================
-#   TODO : edit POST to fit sql insertImages
 # image objects { id, imgURL, label }
 # image upload form data { file[], label[] }
 @app.route("/images/unverified", methods=["GET", "POST"])
@@ -67,13 +66,13 @@ def handleUnverified():
             return jsonify({"success": False, "error": str(e)}), 500
     elif request.method == "POST":
         try:
-            if 'files' not in request.files:
+            if 'file' not in request.files:
                 return jsonify({"success": False, "error": "No file part"}), 400
-            if 'labels' not in request.form:
+            if 'label' not in request.form:
                 return jsonify({"success": False, "error": "No label part"}), 400
         
-            file = request.files.getlist("files")
-            labels = request.form.getlist("labels")
+            file = request.files.getlist("file")
+            labels = request.form.getlist("label")
 
             if len(file) != len(labels):
                 return jsonify({"success": False, "error": "file and label amount mismatch"}), 400

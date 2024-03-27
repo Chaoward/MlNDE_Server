@@ -90,24 +90,21 @@ def insertImages(imgs, skipFile=False):
         wherequery = "("
         
         for ele in imgs:
-            print("inserting label")
             #insert image data to sql DB; with imgURL if skipping file saving
-            cur.execute("INSERT INTO images (sysLabel) VALUES(?);", (ele['sys_label']))
+            cur.execute(f"INSERT INTO images (sysLabel) VALUES('{ele['sys_label']}');")
             #cur.execute("INSERT INTO images (sysLabel, userLabel, imgURL) VALUES(?, ?, ?);", (ele['sys_label'], "", "" if "imgURL" not in ele else ele["imgURL"] ))
             
             if skipFile:
                 continue
 
             #generate and update imgURL
-            print("getting recent ID")
             cur.execute("SELECT last_insert_rowid();")
             lastID = cur.fetchall()[0][0]
-            imgURL = lastID + secure_filename(ele['file'].filename)
+            imgURL = str(lastID) + secure_filename(ele['file'].filename)
             cur.execute("UPDATE images SET imgURL=? WHERE id=?;", (imgURL, lastID))
             wherequery += f"'{imgURL}',"
 
             #save image file with imgURL as file name
-            print("saving")
             ele['file'].save( path.join(IMAGE_PATH, imgURL) )
         wherequery = wherequery[:-1] + ");"
 
@@ -118,6 +115,9 @@ def insertImages(imgs, skipFile=False):
     except db.OperationalError as e:
         print(e)
         connect.commit()
+        raise
+    except Exception as e:
+        print(e)
         raise
     finally:
         connect.close()
