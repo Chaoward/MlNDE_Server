@@ -1,15 +1,15 @@
 import sqlite3 as db
 from werkzeug.utils import secure_filename
+from flask import current_app
 from os import path
 
 
-DEBUG = True
-USE_TEST_DB = True
+DEBUG = current_app.config['DEBUG']
+USE_TEST_DB = current_app.config['USE_TEST_DB']
 
-LABELS_PATH = "."
-IMAGE_PATH = "./db/images/"
-SQL_SCRIPT_DIR = "./db/sql_scripts/"
-DB_PATH = "./db/main.db"
+IMAGE_PATH = current_app.config['IMAGES_DIR']
+SQL_SCRIPT_DIR = current_app.config['SQL_SCRIPT_DIR']
+DB_PATH = current_app.config['MAIN_DB_PATH']
 
 
 ##### TABLES ######################################################################  
@@ -329,7 +329,7 @@ def changeDB(database):
 
 #///// DATABASE SETUP ///////////////
 if USE_TEST_DB:
-    DB_PATH = "./db/test.db"
+    DB_PATH = current_app.config['TEST_DB_PATH']
     runScript("initTestDB")
 else:
     runScript("initDB")

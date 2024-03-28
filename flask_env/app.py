@@ -1,12 +1,15 @@
 from flask import Flask, request, jsonify, send_file
 from flask_cors import CORS
-from Include import sql
-
+from json import load as json_load
 
 app = Flask(__name__)
-UPLOAD_FOLDER = "./db/images/"
-app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
+app.config.from_file("config.json", load=json_load)
 CORS(app)
+
+# * IMPORTANT * : imports using flask app configs go in this block
+with app.app_context():
+    from Include import sql
+
 
 
 def isAllowedFile(fileName):
@@ -14,8 +17,6 @@ def isAllowedFile(fileName):
    return "." in fileName and fileName.split(".")[1] in ALLOWED_EXTENSIONS
 
 
-
-# images, labels, models
 
 @app.route("/")
 def hello_world():
