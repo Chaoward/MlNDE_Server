@@ -137,6 +137,20 @@ def serveImage(filename):
     return send_file(f"./db/images/{filename}")
 
 
+@app.route("/images/train", methods=["PUT"])
+def trainImages():
+    try:
+        # Get all verified images
+        verified_images = sql.select("*", "images", where="verified=1")
+        # Update their verified status to 2 (trained)
+        img_ids = [img["id"] for img in verified_images]
+        count = sql.verify(img_ids, status=2)
+        return jsonify({"success": True, "count": count})
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)}), 500
+
+
+
 # TODO : implement file size return 
 #===== MODELS ==================================================
 @app.route("/models", methods=["GET"])
