@@ -1,15 +1,11 @@
 from flask import Flask, request, jsonify, send_file
 from flask_cors import CORS
-from json import load as json_load
+from Include import sql
+from Include.model import create_training_set, fine_tune_model
+from keras import saving
 
 app = Flask(__name__)
-app.config.from_file("config.json", load=json_load)
 CORS(app)
-
-# * IMPORTANT * : imports using flask app configs go in this block
-with app.app_context():
-    from Include import sql
-
 
 
 def isAllowedFile(fileName):
@@ -142,26 +138,23 @@ def trainImages():
     try:
         # Get all verified images
         img_urls = sql.select("imgURL", "images", where="verified=1")
-        
+        img_urls = list( map(lambda x: x[0], img_urls) )
+
         # query for all label classIDs
         label_ids = sql.select("DISTINCT classID", "labels")
+        label_ids = list( map(lambda x: x[0], label_ids) )
 
         # create image training set
         training_set = create_training_set(img_urls)
 
         #read current model file from folder
-        lastest_model_id = sql.select("id", "models",)[-1]
-        # model = * load model here * 
+        model = saving.load_model("PATH")
 
         # fine tune
         fine_tune_model(model, training_set, label_ids)
 
         # save newly updated model in file_sys and DB
-        lastest_version = sql.select("versionNum", "models", f"id = {lastest_model_id}")[0].split(".")
-        sql.insertModel(f"{lastest_version[0]}.{int(lastest_version[1])+1}.0")  # EX: 1.2.0
-        lastest_model_id = sql.select("id", "models",)[-1]
-
-        model.save(app.config['MODELS_DIR'] + str(lastest_model_id) + ".h5")
+        sql.insertModel(model, len(img_urls))
 
         # Update their verified status to 2 (trained)
         img_ids = sql.select("id", "images", "verified=1")

@@ -1,15 +1,13 @@
 import sqlite3 as db
 from werkzeug.utils import secure_filename
-from flask import current_app
+import config
 from os import path
 
 
-DEBUG = current_app.config['DEBUG']
-USE_TEST_DB = current_app.config['USE_TEST_DB']
-
-IMAGE_PATH = current_app.config['IMAGES_DIR']
-SQL_SCRIPT_DIR = current_app.config['SQL_SCRIPT_DIR']
-DB_PATH = current_app.config['MAIN_DB_PATH']
+USE_TEST_DB = config.USE_TEST_DB
+IMAGE_PATH = config.IMAGES_DIR
+SQL_SCRIPT_DIR = config.SQL_SCRIPT_DIR
+DB_PATH = config.MAIN_DB_PATH
 
 
 ##### TABLES ######################################################################  
@@ -282,11 +280,37 @@ def setRelease(verID):
         connect.close()
 
 
-# TODO : make function
+
 #===== insertModel =====================================
+# PARAM: model : kesas model reference
+#        numOfImgs : int, number of images this new model is trained on
 #=======================================================
-def insertModel():
-    pass
+def insertModel(model, numOfImgs):
+    try:
+        connect = db.connect(DB_PATH)
+        cur = connect.cursor()
+        
+        #record version on DB
+        lastest_version = cur.execute("SELECT versionNum FROM models;").fetchall()[-1][0].split('.')
+        cur.execute(f"INSERT INTO models(versionNum, imgsTrained) VALUES('{lastest_version[0]}.{lastest_version[1]+1}.0', {numOfImgs});")
+        cur.execute(f"SELECT id FROM models WHERE versionNum='{lastest_version[0]}.{lastest_version[1]+1}.0';")
+        newModelId = cur.fetchall()[0][0]
+
+        #use id to save model as a file
+        model.save(f"{config.MODELS_DIR}model-{newModelId}.h5")
+
+        connect.commit()
+    except db.OperationalError as e:
+        print(e)
+        connect.rollback()
+        raise
+    except Exception as e:
+        print(e)
+        connect.rollback()
+        raise
+    finally:
+        connect.close()
+    
 
 
 #===== runScript =====================================
@@ -328,12 +352,12 @@ def changeDB(database):
 
 
 #///// DATABASE SETUP ///////////////
-if USE_TEST_DB:
-    DB_PATH = current_app.config['TEST_DB_PATH']
+if config.USE_TEST_DB:
+    DB_PATH = config.TEST_DB_PATH
     runScript("initTestDB")
 else:
     runScript("initDB")
 
-if DEBUG and not USE_TEST_DB:
+if config.DEBUG and not config.USE_TEST_DB:
     runScript("copyDB")
     DB_PATH = "./db/debug_copy.db"
