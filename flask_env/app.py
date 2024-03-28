@@ -141,9 +141,30 @@ def serveImage(filename):
 def trainImages():
     try:
         # Get all verified images
-        verified_images = sql.select("*", "images", where="verified=1")
+        img_urls = sql.select("imgURL", "images", where="verified=1")
+        
+        # query for all label classIDs
+        label_ids = sql.select("DISTINCT classID", "labels")
+
+        # create image training set
+        training_set = create_training_set(img_urls)
+
+        #read current model file from folder
+        lastest_model_id = sql.select("id", "models",)[-1]
+        # model = * load model here * 
+
+        # fine tune
+        fine_tune_model(model, training_set, label_ids)
+
+        # save newly updated model in file_sys and DB
+        lastest_version = sql.select("versionNum", "models", f"id = {lastest_model_id}")[0].split(".")
+        sql.insertModel(f"{lastest_version[0]}.{int(lastest_version[1])+1}.0")  # EX: 1.2.0
+        lastest_model_id = sql.select("id", "models",)[-1]
+
+        model.save(app.config['MODELS_DIR'] + str(lastest_model_id) + ".h5")
+
         # Update their verified status to 2 (trained)
-        img_ids = [img["id"] for img in verified_images]
+        img_ids = sql.select("id", "images", "verified=1")
         count = sql.verify(img_ids, status=2)
         return jsonify({"success": True, "count": count})
     except Exception as e:

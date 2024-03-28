@@ -127,8 +127,11 @@ def make_batch_prediction(model, pred_dataset, true_dataset):
     #target_names = ['Daisies', 'Dandelions', "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14", "15", "16", "17"]
     print(classification_report(true_dataset, y_predict))
 
-def create_training_set(total = 50, augmented = False):
-    file_name = 'Flowers_Classification.v2-raw\\train\\mix'+chr(92)+"1.jpg"
+# file_names: array of image file names
+def create_training_set(file_names, total = 50, augmented = False):
+    image_path = "./db/images/"
+    file_name = 'Flowers_Classification.v2-raw/train/mix/' + str(1) + ".jpg"
+    file_name = image_path + "1.jpg"
     img = Image.open(file_name)
     img = cv2.resize(np.array(img), (224, 224))  # resize image to match model's expected sizing
     img = img.reshape(1, 224, 224, 3)  # return the image with shaping that TF wants.
@@ -184,7 +187,7 @@ def create_training_set_labels(total = 50, augmented = False):
             vals.append((x+1) % 2)
             if augmented:
                 vals.append((x + 1) % 2)
-    train_labels = {'type': vals}
+    #train_labels = {'type': vals}
     train_labels = np.asarray(vals)
 
     return train_labels
@@ -195,8 +198,14 @@ def compile_predictions(predictions):
         predictions_formatted.append(np.argmax(predictions[x]))
     return predictions_formatted
 
+# train_ds: numpy array, of images data 
+# label_ds: array of classIDs of the labels
+#
 def fine_tune_model(model, train_ds, label_ds):
     model.trainable = True
+
+    #parse classIDs into numpy array
+    label_ds = np.asarray(label_ds)
 
     model.compile(
         optimizer=keras.optimizers.Adam(1e-5),  # Low learning rate
