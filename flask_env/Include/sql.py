@@ -1,11 +1,15 @@
 import sqlite3 as db
+from werkzeug.utils import secure_filename
+from flask import current_app
+from os import path
 
-DEBUG = True
-USE_TEST_DB = True
 
-IMAGE_PATH = "./db/images/"
-SQL_SCRIPT_DIR = "./db/sql_scripts/"
-DB_PATH = "./db/main.db"
+DEBUG = current_app.config['DEBUG']
+USE_TEST_DB = current_app.config['USE_TEST_DB']
+
+IMAGE_PATH = current_app.config['IMAGES_DIR']
+SQL_SCRIPT_DIR = current_app.config['SQL_SCRIPT_DIR']
+DB_PATH = current_app.config['MAIN_DB_PATH']
 
 
 ##### TABLES ######################################################################  
@@ -15,17 +19,19 @@ DB_PATH = "./db/main.db"
 # Tagged appropiately whither they are unverfied, verfied, or trained.
 # COLUMNS
 #   | imgURL TEXT : File name of image on system
-#   | label TEXT  : string label that exist on the labels table
+#   | userLabel TEXT  : string label entered by a user
+#   | sysLabel TEXT  : string label that exist on the labels table
 #   | verified INT DEFAULT 0  : status code of the following...
 #       * 0 : unverfied
-#       * 1 : verfied
+#       * 1 : verified
 #       * 2 : trained
 #   | id INTEGER PRIMARY KEY
 # 
 # 
 #///// labels /////
 # COLUMNS
-#   | label TEXT PRIMARY KEY : String label
+#   | classID INT : class ID number, not unique
+#   | label TEXT : String label
 # 
 # 
 #///// models /////
@@ -47,7 +53,7 @@ DB_PATH = "./db/main.db"
 
 
 
-def select(cols, table, where=""):
+def select(cols, table="", where=""):
     try:
         connect = db.connect(DB_PATH)
         cur = connect.cursor()
@@ -59,7 +65,7 @@ def select(cols, table, where=""):
                 strCols += (", " if i > 0 else "") + cols[i]
             cols = strCols
 
-        cur.execute(f"SELECT {cols} FROM {table} {'WHERE ' + where if len(where) > 0 else ''};")
+        cur.execute(f"SELECT {cols} {'FROM ' + table if table != '' else ''} {'WHERE ' + where if where != '' else ''};")
         return cur.fetchall()
     except db.OperationalError as e:
         print(e)
@@ -68,37 +74,50 @@ def select(cols, table, where=""):
         connect.close()
 
 
-# TODO : TEST
+
 #===== insertImages ==================================
 # Accepts new images with labels and inserts them into DB.
 # 
-# PARAM: imgs : [ {imgURL, label, file} ]
+# PARAM: imgs : [ {sys_label, file, imgURL(optional)} ]
 #
 # RETURNS: int, number of successful inserts
 #=====================================================
-def insertImages(imgs, noNewFile=False):
-    from os import path
+def insertImages(imgs, skipFile=False):
     count = 0
     try:
         connect = db.connect(DB_PATH)
         cur = connect.cursor()
         wherequery = "("
-
+        
         for ele in imgs:
-            if not noNewFile:
-                #save image in images folders
-                ele['file'].save(path.join(IMAGE_PATH, ele["imgURL"] ))
-            cur.execute("INSERT INTO images (imgURL, label) VALUES(?, ?);", (ele["imgURL"], ele["label"]) )
-            wherequery += f"'{ele['imgURL']}',"
+            #insert image data to sql DB; with imgURL if skipping file saving
+            cur.execute(f"INSERT INTO images (sysLabel) VALUES('{ele['sys_label']}');")
+            #cur.execute("INSERT INTO images (sysLabel, userLabel, imgURL) VALUES(?, ?, ?);", (ele['sys_label'], "", "" if "imgURL" not in ele else ele["imgURL"] ))
+            
+            if skipFile:
+                continue
+
+            #generate and update imgURL
+            cur.execute("SELECT last_insert_rowid();")
+            lastID = cur.fetchall()[0][0]
+            imgURL = str(lastID) + secure_filename(ele['file'].filename)
+            cur.execute("UPDATE images SET imgURL=? WHERE id=?;", (imgURL, lastID))
+            wherequery += f"'{imgURL}',"
+
+            #save image file with imgURL as file name
+            ele['file'].save( path.join(IMAGE_PATH, imgURL) )
         wherequery = wherequery[:-1] + ");"
 
-        cur.execute(f"SELECT id FROM images WHERE imgURL IN {wherequery}")
-        count = len(cur.fetchall())
+        cur.execute(f"SELECT count(*) FROM images WHERE imgURL IN {wherequery}")
+        count = cur.fetchall()[0][0]
 
         connect.commit()
     except db.OperationalError as e:
         print(e)
         connect.commit()
+        raise
+    except Exception as e:
+        print(e)
         raise
     finally:
         connect.close()
@@ -109,7 +128,7 @@ def insertImages(imgs, noNewFile=False):
 # Accepts a list of modified images and updates them
 # in the DB.
 # 
-# PARAM: imgList : [ {"id": int, "label": string, ...} ]
+# PARAM: imgList : [ {"id": int, "user_label": string, "sys_label": string, ...} ]
 #
 # RETURNS: None
 #=====================================================
@@ -119,7 +138,7 @@ def updateImages(imgList):
         cur = connect.cursor()
 
         for img in imgList:
-            cur.execute(f"UPDATE images SET label = '{img['label']}' WHERE id = {img['id']};")
+            cur.execute(f"UPDATE images SET sysLabel='{img['sys_label']}', userLabel='{img['user_label']}' WHERE id = {img['id']};")
         
         connect.commit()
     except db.OperationalError as e:
@@ -130,14 +149,15 @@ def updateImages(imgList):
         connect.close()
 
 
-#===== insertLabels ==================================
+#===== insertLabels <DEPRECATED> ==================================
 # Accepts list of lavels and inserts them into the DB.
 # 
 # PARAM: labels : [ label<String> ]
 #
 # RETURNS: int, number of successful inserts
-#=====================================================
+#==================================================================
 def insertLabels(labels):
+    return 0
     try:
         connect = db.connect(DB_PATH)
         cur = connect.cursor()
@@ -262,6 +282,13 @@ def setRelease(verID):
         connect.close()
 
 
+# TODO : make function
+#===== insertModel =====================================
+#=======================================================
+def insertModel():
+    pass
+
+
 #===== runScript =====================================
 # Runs a sql script from the sql_scripts folder
 # 
@@ -290,7 +317,6 @@ def runScript(scriptName):
 # changes the DB_PATH to specified DB file
 #==========================================
 def changeDB(database):
-    from os import path
     global DB_PATH
     try:
         if not path.exists(f"./db/{database}.db"):
@@ -303,11 +329,11 @@ def changeDB(database):
 
 #///// DATABASE SETUP ///////////////
 if USE_TEST_DB:
-    DB_PATH = "./db/test.db"
+    DB_PATH = current_app.config['TEST_DB_PATH']
     runScript("initTestDB")
 else:
     runScript("initDB")
 
-if DEBUG:
+if DEBUG and not USE_TEST_DB:
     runScript("copyDB")
     DB_PATH = "./db/debug_copy.db"

@@ -1,16 +1,22 @@
-from flask import Flask, send_from_directory, request, jsonify, send_file
+from flask import Flask, request, jsonify, send_file
 from flask_cors import CORS
-from Include import sql
-from werkzeug.utils import secure_filename
-import os
-
+from json import load as json_load
 
 app = Flask(__name__)
-UPLOAD_FOLDER = "./db/images/"
-app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
+app.config.from_file("config.json", load=json_load)
 CORS(app)
 
-# images, labels, models
+# * IMPORTANT * : imports using flask app configs go in this block
+with app.app_context():
+    from Include import sql
+
+
+
+def isAllowedFile(fileName):
+   ALLOWED_EXTENSIONS = {"jpg", "jpeg", "png", "gif"}
+   return "." in fileName and fileName.split(".")[1] in ALLOWED_EXTENSIONS
+
+
 
 @app.route("/")
 def hello_world():
@@ -26,7 +32,8 @@ def handleLabels():
             return jsonify( list( map(lambda x: x[0], labels) ) )
         except Exception as e:
             return jsonify({"error": str(e)}), 500
-    elif request.method == "POST":  
+    elif request.method == "POST":
+        return jsonify({"success": False, "error": "POST Method for labels is deprecated, at least temporay."}), 500  
         try:
             labels = request.json
             if type(labels) != list:
@@ -39,13 +46,13 @@ def handleLabels():
 
 
 #===== IMAGES ==================================================
-#   TODO : edit POST to fit sql insertImages
 # image objects { id, imgURL, label }
+# image upload form data { file[], label[] }
 @app.route("/images/unverified", methods=["GET", "POST"])
 def handleUnverified():
     if request.method == "GET":
         try:
-            images_data = sql.select("imgURL, label, id", "images", where="verified=0")
+            images_data = sql.select("imgURL, sysLabel, id", "images", where="verified=0")
             images = []
             for img_data in images_data:
                 img_dict = {
@@ -56,16 +63,38 @@ def handleUnverified():
                 images.append(img_dict)
             return jsonify(images)
         except Exception as e:
+            print(e)
             return jsonify({"success": False, "error": str(e)}), 500
     elif request.method == "POST":
-        if 'file' not in request.files:
-            return jsonify({"success": False, "error": "No file part"}), 400
-    
-        file = request.files['file']
-    
-        if file.filename == '':
-            return jsonify({"success": False, "error": "No selected file"}), 400
-    
+        try:
+            if 'file' not in request.files:
+                return jsonify({"success": False, "error": "No file part"}), 400
+            if 'label' not in request.form:
+                return jsonify({"success": False, "error": "No label part"}), 400
+        
+            file = request.files.getlist("file")
+            labels = request.form.getlist("label")
+
+            if len(file) != len(labels):
+                return jsonify({"success": False, "error": "file and label amount mismatch"}), 400
+        
+            imgList = []
+            for i in range( len(file) ):
+                if file[i].filename == '' or not isAllowedFile(file[i].filename):
+                    continue
+                imgList.append({
+                    "file": file[i],
+                    "sys_label": labels[i]
+                })
+                print(file[i].name)
+                print(labels[i])
+
+            return jsonify({"success": True, "count": sql.insertImages(imgList)}), 200
+        except Exception as e:
+            print(e)
+            return jsonify({"success": False, "error": str(e)}), 500
+
+        """
         if file:
             filename = secure_filename(file.filename)
             file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
@@ -74,8 +103,9 @@ def handleUnverified():
             # Insert image details into the database
             label = request.form.get('label')
             sql.insertImages([{'imgURL': filename, 'label': label}])
+        """
         
-            return jsonify({"success": True, "message": "File uploaded successfully"}), 200
+        return jsonify({"success": True, "message": "File uploaded successfully"}), 200
         
 
 

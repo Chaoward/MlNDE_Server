@@ -28,8 +28,9 @@ def testSqlite():
 
 
 def testSql():
-    outTest(setRelease(4), -1)
-    outTest(setRelease(2), 0)
+    outTest(select("count(*)", "labels"), [(1875,)])
+    outTest(insertImages([{'sys_label': 'tiger shark'}], True), 1)
+    #outTest(select("*", "labels"), [('chicken',), ('dino',), ('dog',)])
     
 
 

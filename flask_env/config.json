@@ -1,0 +1,8 @@
+{
+    "DEBUG": true,
+    "USE_TEST_DB": true,
+    "TEST_DB_PATH": "./db/test.db",
+    "SQL_SCRIPT_DIR": "./db/sql_scripts/",
+    "MAIN_DB_PATH": "./db/main.db",
+    "IMAGES_DIR": "./db/images/"
+}
