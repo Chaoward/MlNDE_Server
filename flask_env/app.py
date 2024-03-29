@@ -2,7 +2,7 @@ from flask import Flask, request, jsonify, send_file
 from flask_cors import CORS
 from Include import sql
 from Include.model import create_training_set, fine_tune_model
-from keras import saving
+from keras import saving, models
 import config
 
 app = Flask(__name__)
@@ -149,13 +149,9 @@ def trainImages():
         # query and change all string labels to their classIDs
         for i in range(0, len(label_ids)):
             label_ids[i] = sql.select("classID", "labels", f"label='{label_ids[i]}'")
-        
-        # query for all label classIDs
-        #label_ids = sql.select("DISTINCT classID", "labels")
-        #label_ids = list( map(lambda x: x[0], label_ids) )
 
         # create image training set
-        print("===== Create Training =====")
+        print("===== Create Training Set =====")
         training_set = create_training_set(img_urls)
 
         #read current model file from folder
@@ -212,7 +208,12 @@ def getModels():
 @app.route("/models/release", methods=["GET", "PUT"])
 def handleRelease():
     if request.method == "GET":
-        pass
+        modelID = sql.select("id", "models", "release=1")
+        if len(modelID) == 0:
+            return jsonify({"success": False, "error": "Release not Found"}), 500
+        modelID = modelID[0][0]
+
+        return jsonify({"success": True, "model": models.load_model(f"{config.MODELS_DIR}{modelID}-model.h5").to_json() })
     elif request.method == "PUT":
         try:
             version_id = request.json["verID"]
