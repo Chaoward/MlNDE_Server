@@ -3,6 +3,7 @@ from flask_cors import CORS
 from Include import sql
 from Include.model import create_training_set, fine_tune_model
 from keras import saving
+import config
 
 app = Flask(__name__)
 CORS(app)
@@ -136,31 +137,49 @@ def serveImage(filename):
 @app.route("/images/train", methods=["PUT"])
 def trainImages():
     try:
-        # Get all verified images
-        img_urls = sql.select("imgURL", "images", where="verified=1")
-        img_urls = list( map(lambda x: x[0], img_urls) )
+        # Get all verified images with their labels
+        verified = sql.select("imgURL, sysLabel", "images", where="verified=1")
+        if (len(verified) == 0):
+            return jsonify({"success": False, "error": "No Verified Images to Train"}), 400
+        
+        #split labels and imgURLs
+        img_urls = list( map(lambda x: x[0], verified) )
+        label_ids = list( map(lambda x: x[1], verified) )
 
+        # query and change all string labels to their classIDs
+        for i in range(0, len(label_ids)):
+            label_ids[i] = sql.select("classID", "labels", f"label='{label_ids[i]}'")
+        
         # query for all label classIDs
-        label_ids = sql.select("DISTINCT classID", "labels")
-        label_ids = list( map(lambda x: x[0], label_ids) )
+        #label_ids = sql.select("DISTINCT classID", "labels")
+        #label_ids = list( map(lambda x: x[0], label_ids) )
 
         # create image training set
+        print("===== Create Training =====")
         training_set = create_training_set(img_urls)
 
         #read current model file from folder
-        model = saving.load_model("PATH")
+        print("===== Loading Model =====")
+        lastest_model_id = sql.select("id", "models")[-1][0]
+        model = saving.load_model(f"{config.MODELS_DIR}{lastest_model_id}-model.h5")
 
         # fine tune
-        fine_tune_model(model, training_set, label_ids)
+        print("===== Fine Tune =====")
+        model = fine_tune_model(model, training_set, label_ids)
 
         # save newly updated model in file_sys and DB
+        print("===== Saving Model =====")
         sql.insertModel(model, len(img_urls))
 
         # Update their verified status to 2 (trained)
+        print("===== Updating Verify =====")
         img_ids = sql.select("id", "images", "verified=1")
+        img_ids = list( map(lambda x: x[0], img_ids) )
         count = sql.verify(img_ids, status=2)
+
         return jsonify({"success": True, "count": count})
     except Exception as e:
+        print(e)
         return jsonify({"success": False, "error": str(e)}), 500
 
 
@@ -187,19 +206,23 @@ def getModels():
         return jsonify(payload)
     except Exception as e:
         return jsonify({"error": str(e)}), 500
-    
-@app.route("/models/release", methods=["PUT"])
-def setRelease():
-    try:
-        version_id = request.json["verID"]
 
-        result = sql.setRelease(version_id)
 
-        if result == 0:
-            return jsonify({"success": True}), 200
-        elif result == 1:
-            return jsonify({"success": False, "error": f"Model with id : {version_id} not found"}), 404
-        elif result == -1:
-            return jsonify({"success": False, "error": f"Model with id : {version_id} is already the release version"}), 400
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
+#   TODO : implement GET, returns the release model file
+@app.route("/models/release", methods=["GET", "PUT"])
+def handleRelease():
+    if request.method == "GET":
+        pass
+    elif request.method == "PUT":
+        try:
+            version_id = request.json["verID"]
+            result = sql.setRelease(version_id)
+
+            if result == 0:
+                return jsonify({"success": True}), 200
+            elif result == 1:
+                return jsonify({"success": False, "error": f"Model with id : {version_id} not found"}), 404
+            elif result == -1:
+                return jsonify({"success": False, "error": f"Model with id : {version_id} is already the release version"}), 400
+        except Exception as e:
+            return jsonify({"error": str(e)}), 500

@@ -36,11 +36,14 @@ ATTACH DATABASE './db/labels.db' AS 'label_db';
 INSERT INTO main.labels SELECT * FROM label_db.labels;
 
 
-INSERT INTO images (imgURL, userLabel) VALUES('chicken.png', 'bird');
-INSERT INTO images (imgURL, userLabel) VALUES('dino.png', 'jeep');
-INSERT INTO images (imgURL, userLabel) VALUES('dog.png', 'pufferfish');
+INSERT INTO images (imgURL, sysLabel, verified) VALUES('1chicken.png', 'hen', 0);
+INSERT INTO images (imgURL, sysLabel, verified) VALUES('2dino.png', 'hen', 0);
+INSERT INTO images (imgURL, sysLabel, verified) VALUES('3dog.png', 'pufferfish', 0);
+INSERT INTO images (imgURL, sysLabel, verified) VALUES('4.jpg', 'cauliflower', 1);
+INSERT INTO images (imgURL, sysLabel, verified) VALUES('5.jpg', 'cauliflower', 1);
+INSERT INTO images (imgURL, sysLabel, verified) VALUES('6.jpg', 'cauliflower', 1);
 
 
-INSERT INTO models (versionNum) VALUES ('1.0.0'), ('1.2.9'), ('2.0.1');
-INSERT INTO models (versionNum, release) VALUES ('2.2.2', 1);
+
+INSERT INTO models (versionNum, release) VALUES ('1.0.0', 1);
 

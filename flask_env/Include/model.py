@@ -7,7 +7,7 @@ from keras.applications.mobilenet_v2 import preprocess_input
 from keras.applications.mobilenet_v2 import decode_predictions
 from keras.layers import Dense, Flatten
 from keras.models import Model
-from numpy import asarray
+from numpy import asarray, ndarray
 #import pandas as pd
 from PIL import Image
 import cv2
@@ -16,6 +16,8 @@ from sklearn.model_selection import train_test_split
 from sklearn.metrics import classification_report
 from keras import layers
 #import matplotlib.pyplot as plt
+
+import config
 
 # creates a base model of mobilenet that's able to predict different things
 def create_base_model(input_shape_arr=(224, 224, 3)):
@@ -127,34 +129,26 @@ def make_batch_prediction(model, pred_dataset, true_dataset):
     #target_names = ['Daisies', 'Dandelions', "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14", "15", "16", "17"]
     print(classification_report(true_dataset, y_predict))
 
+
+
 # file_names: array of image file names
 def create_training_set(file_names, total = 50, augmented = False):
-    image_path = "./db/images/"
-    file_name = 'Flowers_Classification.v2-raw/train/mix/' + str(1) + ".jpg"
-    file_name = image_path + "1.jpg"
-    img = Image.open(file_name)
-    img = cv2.resize(np.array(img), (224, 224))  # resize image to match model's expected sizing
-    img = img.reshape(1, 224, 224, 3)  # return the image with shaping that TF wants.
-
-    # asarray() class is used to convert PIL images into NumPy arrays
-    numpydata_original = asarray(img)
-
-    if augmented:
-        flipped = tf.image.flip_left_right(img)
-        numpydata_flip = asarray(flipped)
-        numpydata_original = np.concatenate([numpydata_original, numpydata_flip], axis=0)
-
-    #print(numpydata_original)
+    numpydata_original = None
 
     for x in file_names:
         # new image is loaded with the name of the file
-        img = Image.open(x)
+        print(f"{config.IMAGES_DIR}{x}")
+        img = Image.open(f"{config.IMAGES_DIR}{x}")
         img = cv2.resize(np.array(img), (224, 224))  # resize image to match model's expected sizing
         img = img.reshape(1, 224, 224, 3)  # return the image with shaping that TF wants.
 
         numpydata = asarray(img)
 
-        numpydata_original = np.concatenate([numpydata_original, numpydata], axis=0)
+        if type(numpydata_original) != ndarray:
+            # asarray() class is used to convert PIL images into NumPy arrays
+            numpydata_original = numpydata
+        else:
+            numpydata_original = np.concatenate([numpydata_original, numpydata], axis=0)
 
         if augmented:
             flipped = tf.image.flip_left_right(img)
@@ -167,6 +161,8 @@ def create_training_set(file_names, total = 50, augmented = False):
     #    lambda x, y: (data_augmentation(x, training=True), y))
 
     return numpydata_original
+
+
 
 def create_training_set_labels(total = 50, augmented = False):
     vals = []

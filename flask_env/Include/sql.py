@@ -292,12 +292,12 @@ def insertModel(model, numOfImgs):
         
         #record version on DB
         lastest_version = cur.execute("SELECT versionNum FROM models;").fetchall()[-1][0].split('.')
-        cur.execute(f"INSERT INTO models(versionNum, imgsTrained) VALUES('{lastest_version[0]}.{lastest_version[1]+1}.0', {numOfImgs});")
-        cur.execute(f"SELECT id FROM models WHERE versionNum='{lastest_version[0]}.{lastest_version[1]+1}.0';")
+        cur.execute(f"INSERT INTO models(versionNum, imgsTrained) VALUES('{lastest_version[0]}.{int(lastest_version[1])+1}.0', {numOfImgs});")
+        cur.execute(f"SELECT id FROM models WHERE versionNum='{lastest_version[0]}.{int(lastest_version[1])+1}.0';")
         newModelId = cur.fetchall()[0][0]
 
         #use id to save model as a file
-        model.save(f"{config.MODELS_DIR}model-{newModelId}.h5")
+        model.save(f"{config.MODELS_DIR}{newModelId}-model.h5")
 
         connect.commit()
     except db.OperationalError as e:
