@@ -112,6 +112,9 @@ def verify():
         return jsonify({'success': False, 'error': 'PUT request ONLY.'})
     try:
         imgList = request.json
+        for i in range(len(imgList)):
+            imgList[i]["sys_label"] = imgList[i].pop("label")
+            imgList[i]["user_label"] = ""   # temp
         sql.updateImages(imgList)
         count = sql.verify( list(map(lambda img: img['id'], imgList)) )
         return jsonify( {'success': True, 'count': count} if count != 0 else {'success': False, 'error': "Problem occured while verifying images"} )
