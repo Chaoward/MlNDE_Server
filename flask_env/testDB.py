@@ -1,4 +1,5 @@
 import sqlite3 as db
+from Include.model import create_base_model
 from Include.sql import *
 
 def testSqlite():
@@ -28,8 +29,12 @@ def testSqlite():
 
 
 def testSql():
-    outTest(select("count(*)", "labels"), [(1875,)])
-    outTest(insertImages([{'sys_label': 'tiger shark'}], True), 1)
+    outTest(insertModel_Label( [{'modelID': 1, 'labelID': 404, 'count': 3}, {'modelID': 1, 'labelID': 500, 'count': 7}] ), 2)
+    outTest(select("*", "model_label"), [])
+    #outTest(select("imgURL", "images", where="verified=0"), [])
+    #outTest(select("DISTINCT classID", "labels"), [])
+    #outTest(select("count(*)", "labels"), [(1875,)])
+    #outTest(insertImages([{'sys_label': 'tiger shark'}], True), 1)
     #outTest(select("*", "labels"), [('chicken',), ('dino',), ('dog',)])
     
 
@@ -48,6 +53,8 @@ def testAll():
     outTest(verify([1], 2), 1)
     outTest(len(select("id", "images", "verified = 2")), 1)
 
+def test():
+    create_base_model().save("./db/1-model.h5")
 
 
 def outTest(output, expected):
@@ -64,6 +71,7 @@ def outTest(output, expected):
     
 
 #////////// EXECUTE //////////////////////////
+#test()
 testSql()
 #testSqlite()
 #testAll()

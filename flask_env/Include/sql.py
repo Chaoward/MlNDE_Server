@@ -1,6 +1,7 @@
 import sqlite3 as db
 from werkzeug.utils import secure_filename
 import config
+import json
 from os import path
 
 
@@ -45,7 +46,8 @@ DB_PATH = config.MAIN_DB_PATH
 # many-to-many table for models trained with new labels
 # COLUMNS
 #   | modelID INTEGER NOT NULL
-#   | label TEXT NOT NULL
+#   | labelID TEXT NOT NULL
+#   | count INT DEFAULT 0
 #######################################################################################  
 
 
@@ -284,6 +286,8 @@ def setRelease(verID):
 #===== insertModel =====================================
 # PARAM: model : kesas model reference
 #        numOfImgs : int, number of images this new model is trained on
+#
+# RETURNS: int : modelID of newly inserted model else -1
 #=======================================================
 def insertModel(model, numOfImgs):
     try:
@@ -299,18 +303,58 @@ def insertModel(model, numOfImgs):
         #use id to save model as a file
         model.save(f"{config.MODELS_DIR}{newModelId}-model.h5")
 
+        #save as a json format
+        with open(f"{config.MODELS_DIR}{newModelId}.json", "w+") as file:
+            file.write( json.dumps(model.to_json()) )
+            file.close()
+
         connect.commit()
     except db.OperationalError as e:
         print(e)
         connect.rollback()
+        newModelId = -1
         raise
     except Exception as e:
         print(e)
         connect.rollback()
+        newModelId = -1
         raise
     finally:
         connect.close()
+        return newModelId
     
+
+
+#===== insertModel_Label ==============================
+# Add a new entry to model_label table
+# 
+# PARAM: entries : [ {modelID, labelID(label's classID), count}... ]
+#
+# RETURNS : int : count of successful entries
+#======================================================
+def insertModel_Label(entries):
+    count = 0
+    try:
+        connect = db.connect(DB_PATH)
+        cur = connect.cursor()
+
+        for entry in entries:
+            cur.execute("INSERT INTO model_label (modelID, labelID, count) VALUES(?, ? ,?)", (entry['modelID'], entry['labelID'], entry['count']) )
+            count += 1
+        
+        connect.commit()
+    except db.OperationalError as e:
+        print(e)
+        connect.commit()
+        raise
+    except Exception as e:
+        print(e)
+        connect.rollback()
+        count = 0
+        raise
+    finally:
+        connect.close()
+        return count
 
 
 #===== runScript =====================================

@@ -28,7 +28,8 @@ CREATE TABLE models (
 
 CREATE TABLE model_label (
     modelID INTEGER NOT NULL,
-    label TEXT NOT NULL
+    labelID INTEGER NOT NULL,
+    count INT DEFAULT 1
 );
 
 
