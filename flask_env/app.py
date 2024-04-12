@@ -3,6 +3,7 @@ from flask_cors import CORS
 from Include import sql
 from Include.model import create_training_set, fine_tune_model
 from keras import saving, models
+import json
 import config
 
 app = Flask(__name__)
@@ -49,13 +50,14 @@ def handleLabels():
 def handleUnverified():
     if request.method == "GET":
         try:
-            images_data = sql.select("imgURL, sysLabel, id", "images", where="verified=0")
+            images_data = sql.select("imgURL, sysLabel, userLabel, id", "images", where="verified=0")
             images = []
             for img_data in images_data:
                 img_dict = {
                     "imgURL": img_data[0],
-                    "label": img_data[1],
-                    "id": img_data[2]
+                    "sysLabel": img_data[1],
+                    "userLabel": img_data[2],
+                    "id": img_data[3]
                 }
                 images.append(img_dict)
             return jsonify(images)
@@ -151,7 +153,7 @@ def trainImages():
 
         # query and change all string labels to their classIDs
         for i in range(0, len(label_ids)):
-            label_ids[i] = sql.select("classID", "labels", f"label='{label_ids[i]}'")
+            label_ids[i] = sql.select("classID", "labels", f"label='{label_ids[i]}'")[0][0]
 
         # create image training set
         print("===== Create Training Set =====")
@@ -168,13 +170,24 @@ def trainImages():
 
         # save newly updated model in file_sys and DB
         print("===== Saving Model =====")
-        sql.insertModel(model, len(img_urls))
+        modelID = sql.insertModel(model, len(img_urls))
+        if modelID < 0:
+            return jsonify({"success": False, "error": "Failed to save Model"}), 500
 
         # Update their verified status to 2 (trained)
         print("===== Updating Verify =====")
         img_ids = sql.select("id", "images", "verified=1")
         img_ids = list( map(lambda x: x[0], img_ids) )
         count = sql.verify(img_ids, status=2)
+
+        # record model_label entries for the new model
+        entries = {}
+        for id in label_ids:
+            if (entries.get(str(id)) == None):
+                entries[str(id)] = {"modelID": modelID, "labelID": id, "count": 1}
+            else:
+                entries[str(id)]["count"] += 1
+        sql.insertModel_Label( list( entries.values() ) )
 
         return jsonify({"success": True, "count": count})
     except Exception as e:
@@ -183,23 +196,28 @@ def trainImages():
 
 
 
-# TODO : implement file size return 
+ 
 #===== MODELS ==================================================
-@app.route("/models", methods=["GET"])
+@app.route("/models/info", methods=["GET"])
 def getModels():
+    from os import path
     try:
         models = sql.select("*", "models")
         payload = []
+
+        #temp
+        print( sql.select("*", "model_label") )
         
         for mod in models:
-            mod_labals = sql.select("label", "model_label", f"modelID={mod[3]}")
+            mod_labals = sql.select("l.label, m.count", "model_label AS m INNER JOIN labels AS l ON m.labelID = l.classID", f"m.modelID={mod[3]}")
+            
             payload.append({
-                "versionNum": mod[0],
+                "version": mod[0],
                 "release": mod[1] == 1,
-                "imgsTrained": mod[2],
+                "images": mod[2],
                 "id": mod[3],
-                "labels": list( map(lambda x: x[0], mod_labals) ),
-                "size": "100MB"
+                "labels": list( map(lambda x: {"label": x[0], "count": x[1]}, mod_labals) ),
+                "size": path.getsize(f"{config.MODELS_DIR}{mod[3]}-model.h5")   #bytes
             })
 
         return jsonify(payload)
@@ -216,7 +234,8 @@ def handleRelease():
             return jsonify({"success": False, "error": "Release not Found"}), 500
         modelID = modelID[0][0]
 
-        return jsonify({"success": True, "model": models.load_model(f"{config.MODELS_DIR}{modelID}-model.h5").to_json() })
+        file = open(f"{config.MODELS_DIR}{modelID}.json", "r")
+        return jsonify({"success": True, "model": json.load(file.readline()) }) #untested
     elif request.method == "PUT":
         try:
             version_id = request.json["verID"]

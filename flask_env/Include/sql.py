@@ -290,6 +290,7 @@ def setRelease(verID):
 # RETURNS: int : modelID of newly inserted model else -1
 #=======================================================
 def insertModel(model, numOfImgs):
+    newModelId = -1
     try:
         connect = db.connect(DB_PATH)
         cur = connect.cursor()

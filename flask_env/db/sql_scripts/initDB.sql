@@ -7,13 +7,10 @@ CREATE TABLE IF NOT EXISTS images (
     id INTEGER PRIMARY KEY
 );
 
-
-
 CREATE TABLE IF NOT EXISTS labels (
     classID INT,
     label TEXT
 );
-
 
 
 CREATE TABLE IF NOT EXISTS models (
@@ -23,9 +20,8 @@ CREATE TABLE IF NOT EXISTS models (
     id INTEGER PRIMARY KEY
 );
 
-
-
 CREATE TABLE IF NOT EXISTS model_label (
     modelID INTEGER NOT NULL,
-    label TEXT NOT NULL
+    labelID INTEGER NOT NULL,
+    count INT DEFAULT 1
 );
