@@ -16,6 +16,9 @@ from sklearn.model_selection import train_test_split
 from sklearn.metrics import classification_report
 from keras import layers
 #import matplotlib.pyplot as plt
+from tensorflow.keras.preprocessing.image import ImageDataGenerator, img_to_array, load_img
+from Include import sql
+
 
 import config
 
@@ -161,6 +164,103 @@ def create_training_set(file_names, total = 50, augmented = False):
     #    lambda x, y: (data_augmentation(x, training=True), y))
 
     return numpydata_original
+
+
+from tensorflow.keras.preprocessing.image import img_to_array, load_img
+import numpy as np
+import cv2
+
+def create_training_set2(img_urls, img_labels):
+    # First, identify new labels that need more images
+    new_labels = trainHelper(img_urls, img_labels)
+    
+    # Determine the required augmentation for labels with insufficient images
+    augmentShorts(new_labels)
+    
+    # Now process all original images
+    numpydata_original = None
+    for img_url in img_urls:
+        img = load_img(f"{config.IMAGES_DIR}{img_url}")
+        img = cv2.resize(np.array(img), (224, 224))  # Resize image to match model's expected sizing
+        img = img.reshape(1, 224, 224, 3)  # Reshape the image for model processing
+        img_array = img_to_array(img)
+
+        if numpydata_original is None:
+            numpydata_original = img_array
+        else:
+            numpydata_original = np.concatenate([numpydata_original, img_array], axis=0)
+    
+    # Additionally, process any augmented images that were generated
+    for label_id, data in new_labels.items():
+        if 'augmented_images' in data:
+            for augmented_image in data['augmented_images']:
+                if numpydata_original is None:
+                    numpydata_original = augmented_image
+                else:
+                    numpydata_original = np.concatenate([numpydata_original, augmented_image], axis=0)
+
+    return numpydata_original
+
+def augment_images_with_generator(img_urls, count_needed):
+    datagen = ImageDataGenerator(
+        rotation_range=270,
+        width_shift_range=0.1,
+        height_shift_range=0.1,
+        shear_range=0.1,
+        zoom_range=[0.5,1.5],
+        horizontal_flip=True,
+        fill_mode='nearest'
+    )
+
+    numpydata_original = None
+    for img_url in img_urls:
+        img = load_img(f"{config.IMAGES_DIR}{img_url}")
+        img = img.resize((224, 224))
+        x = img_to_array(img)
+        x = x.reshape((1,) + x.shape)
+
+        if numpydata_original is None:
+            numpydata_original = x
+        else:
+            numpydata_original = np.concatenate([numpydata_original, x], axis=0)
+    
+    num_augmented = 0
+    augmented_images = []
+    while num_augmented < count_needed:
+        for batch in datagen.flow(numpydata_original, batch_size=1):
+            augmented_images.append(batch[0])
+            num_augmented += 1
+            if num_augmented >= count_needed:
+                break
+
+    return augmented_images
+
+def augmentShorts(new_labels):
+    for label_id, data in new_labels.items():
+        if data['count'] < 100:
+            count_needed = 100 - data['count']
+            augmented_images = augment_images_with_generator(data['imgURLs'], count_needed)
+            data['augmented_images'] = augmented_images
+
+def trainHelper(img_urls, img_labels):
+    known_labels = set()
+    with open('../db/labels.txt', 'r') as file:
+        for line in file:
+            _, label = line.strip().split('~', 1)
+            primary_label = label.split(',')[0].strip()
+            known_labels.add(primary_label)
+
+    new_labels = {}
+    for label, img_url in zip(img_labels, img_urls):
+        if label not in known_labels:
+            if label not in new_labels:
+                new_labels[label] = {'count': 1, 'imgURLs': [img_url]}
+            else:
+                new_labels[label]['count'] += 1
+                new_labels[label]['imgURLs'].append(img_url)
+
+    return new_labels
+
 
 
 
