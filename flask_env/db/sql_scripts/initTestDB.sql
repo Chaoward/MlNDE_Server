@@ -21,6 +21,7 @@ CREATE TABLE labels (
 
 CREATE TABLE models (
     versionNum TEXT,
+    isoDate TEXT,
     release BIT DEFAULT 0,
     imgsTrained INT DEFAULT 0,
     id INTEGER PRIMARY KEY
@@ -44,4 +45,4 @@ INSERT INTO images (imgURL, sysLabel, verified) VALUES('4.jpg', 'cauliflower', 0
 INSERT INTO images (imgURL, sysLabel, verified) VALUES('5.jpg', 'cauliflower', 0);
 INSERT INTO images (imgURL, sysLabel, verified) VALUES('6.jpg', 'cauliflower', 0);
 
-INSERT INTO models (versionNum, release) VALUES ('1.0.0', 1);
+INSERT INTO models (versionNum, isoDate, release) VALUES ('1.0.0', '2024-1-1', 1);

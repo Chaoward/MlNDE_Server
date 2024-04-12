@@ -209,15 +209,16 @@ def getModels():
         print( sql.select("*", "model_label") )
         
         for mod in models:
-            mod_labals = sql.select("l.label, m.count", "model_label AS m INNER JOIN labels AS l ON m.labelID = l.classID", f"m.modelID={mod[3]}")
+            mod_labals = sql.select("l.label, m.count", "model_label AS m INNER JOIN labels AS l ON m.labelID = l.classID", f"m.modelID={mod[4]}")
             
             payload.append({
                 "version": mod[0],
-                "release": mod[1] == 1,
-                "images": mod[2],
-                "id": mod[3],
+                "date": mod[1],
+                "release": mod[2] == 1,
+                "images": mod[3],
+                "id": mod[4],
                 "labels": list( map(lambda x: {"label": x[0], "count": x[1]}, mod_labals) ),
-                "size": path.getsize(f"{config.MODELS_DIR}{mod[3]}-model.h5")   #bytes
+                "size": path.getsize(f"{config.MODELS_DIR}{mod[4]}-model.h5")   #bytes
             })
 
         return jsonify(payload)

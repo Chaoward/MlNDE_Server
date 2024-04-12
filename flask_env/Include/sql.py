@@ -3,6 +3,7 @@ from werkzeug.utils import secure_filename
 import config
 import json
 from os import path
+from datetime import datetime
 
 
 USE_TEST_DB = config.USE_TEST_DB
@@ -297,7 +298,7 @@ def insertModel(model, numOfImgs):
         
         #record version on DB
         lastest_version = cur.execute("SELECT versionNum FROM models;").fetchall()[-1][0].split('.')
-        cur.execute(f"INSERT INTO models(versionNum, imgsTrained) VALUES('{lastest_version[0]}.{int(lastest_version[1])+1}.0', {numOfImgs});")
+        cur.execute(f"INSERT INTO models(versionNum, imgsTrained, isoDate) VALUES('{lastest_version[0]}.{int(lastest_version[1])+1}.0', {numOfImgs}, '{datetime.utcnow().isoformat()}');")
         cur.execute(f"SELECT id FROM models WHERE versionNum='{lastest_version[0]}.{int(lastest_version[1])+1}.0';")
         newModelId = cur.fetchall()[0][0]
 
