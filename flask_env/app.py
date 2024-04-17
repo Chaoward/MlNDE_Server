@@ -9,6 +9,7 @@ import config
 app = Flask(__name__)
 CORS(app)
 
+IS_TRAINING = False
 
 def isAllowedFile(fileName):
    ALLOWED_EXTENSIONS = {"jpg", "jpeg", "png", "gif"}
@@ -141,7 +142,12 @@ def serveImage(filename):
 
 @app.route("/images/train", methods=["PUT"])
 def trainImages():
+    global IS_TRAINING
+    if (IS_TRAINING):
+        return jsonify({"success": False, "error": "Server Already in the Process of Fine Tuning"}), 400
     try:
+        IS_TRAINING = True
+
         # Get all verified images with their labels
         verified = sql.select("imgURL, sysLabel", "images", where="verified=1")
         if (len(verified) == 0):
@@ -193,13 +199,33 @@ def trainImages():
     except Exception as e:
         print(e)
         return jsonify({"success": False, "error": str(e)}), 500
+    finally:
+        IS_TRAINING = False
 
 
 
  
 #===== MODELS ==================================================
+@app.route("/models/", methods=["GET"])
+def handleModel():
+    if request.method != "GET":
+        return jsonify({"error": "GET Request Only!"}), 400
+    try:
+        from os import path
+        modelPath = f"{config.MODELS_DIR}{request.args.get('id')}.json"
+        
+        if not path.exists(modelPath):
+            return jsonify({"success": False, "error": f"Model with id \'{request.args.get('id')}\' Not Found!"}), 400
+
+        file = open(modelPath, "r")
+        return jsonify(json.load(file)), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+
 @app.route("/models/info", methods=["GET"])
-def getModels():
+def handleModelInfo():
     from os import path
     try:
         models = sql.select("*", "models")
@@ -226,7 +252,6 @@ def getModels():
         return jsonify({"error": str(e)}), 500
 
 
-#   TODO : implement GET, returns the release model file
 @app.route("/models/release", methods=["GET", "PUT"])
 def handleRelease():
     if request.method == "GET":
@@ -235,8 +260,9 @@ def handleRelease():
             return jsonify({"success": False, "error": "Release not Found"}), 500
         modelID = modelID[0][0]
 
-        file = open(f"{config.MODELS_DIR}{modelID}.json", "r")
-        return jsonify({"success": True, "model": json.load(file.readline()) }) #untested
+        file = open(f"{config.MODELS_DIR}{modelID}.json", "r"), 200
+
+        return jsonify(json.load(file))
     elif request.method == "PUT":
         try:
             version_id = request.json["verID"]
@@ -249,4 +275,20 @@ def handleRelease():
             elif result == -1:
                 return jsonify({"success": False, "error": f"Model with id : {version_id} is already the release version"}), 400
         except Exception as e:
-            return jsonify({"error": str(e)}), 500
+            return jsonify({"success": False, "error": str(e)}), 500
+
+
+@app.route("/models/release/info", methods=["GET"])
+def handleReleaseInfo():
+    try:
+        queryData = sql.select("*", "models", "release=1")[0]
+        queryData = {
+            "version": queryData[0],
+            "date": queryData[1],
+            "release": queryData[2],
+            "images": queryData[3],
+            "id": queryData[4]
+        }
+        return jsonify(queryData), 200
+    except Exception as e:
+            return jsonify({"success": False, "error": str(e)}), 500
