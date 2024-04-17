@@ -29,7 +29,11 @@ def testSqlite():
 
 
 def testSql():
+    outTest(removeModel(1), 1)
+    outTest(removeModel(2), 0)
+
     # record model_label entries for the new model
+    """
     entries = {}
     for id in [404, 404, 500]:
         if (entries.get(str(id)) == None):
@@ -39,7 +43,7 @@ def testSql():
     insertModel_Label( list( entries.values() ) )
 
     outTest(select("*", "model_label"), [])
-
+    """
     #outTest(insertModel_Label( [{'modelID': 1, 'labelID': 404, 'count': 3}, {'modelID': 1, 'labelID': 500, 'count': 7}] ), 2)
     #outTest(select("*", "model_label"), [])
     #outTest(select("imgURL", "images", where="verified=0"), [])

@@ -357,6 +357,56 @@ def insertModel_Label(entries):
     finally:
         connect.close()
         return count
+    
+
+# TODO : improve count or replace with with void return
+#===== removeModel ==================================
+# Removes a list of models from the DB
+# 
+# PARAM: model ID | array of model IDs
+#                  
+# RETURNS : int : count of successful deletes         
+#====================================================
+def removeModel(modelIDs):
+    count = 0
+    try:
+        connect = db.connect(DB_PATH)
+        cur = connect.cursor()
+        
+        asStr = "("
+        if type(modelIDs) == list:
+            count = len(modelIDs)
+            #parse list/int into a string
+            for id in modelIDs:
+                asStr += f"{id},"
+            asStr += "\b)"
+        elif type(modelIDs) == int:
+            count = 1
+            asStr += f"{modelIDs})"
+        else:
+            raise Exception("Type not a list or int")
+        
+        #DELETE
+        cur.execute(f"DELETE FROM models WHERE id IN {asStr};")
+        cur.execute(f"SELECT id FROM models WHERE id IN {asStr};")
+
+        count -= len(cur.fetchall())
+
+        connect.commit()
+    except db.OperationalError as e:
+        print(e)
+        connect.rollback()
+        count = 0
+        raise
+    except Exception as e:
+        print(e)
+        connect.rollback()
+        count = 0
+        raise
+    finally:
+        connect.close()
+        return count
+
 
 
 #===== runScript =====================================

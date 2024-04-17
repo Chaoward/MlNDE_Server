@@ -204,23 +204,32 @@ def trainImages():
 
 
 
- 
+ # TODO : recycle model file 
 #===== MODELS ==================================================
-@app.route("/models/", methods=["GET"])
+@app.route("/models/", methods=["GET", "DELETE"])
 def handleModel():
-    if request.method != "GET":
-        return jsonify({"error": "GET Request Only!"}), 400
-    try:
-        from os import path
-        modelPath = f"{config.MODELS_DIR}{request.args.get('id')}.json"
-        
-        if not path.exists(modelPath):
-            return jsonify({"success": False, "error": f"Model with id \'{request.args.get('id')}\' Not Found!"}), 400
+    if request.method == "GET":
+        try:
+            from os import path
+            modelPath = f"{config.MODELS_DIR}{request.args.get('id')}.json"
+            
+            if not path.exists(modelPath):
+                return jsonify({"success": False, "error": f"Model with id \'{request.args.get('id')}\' Not Found!"}), 400
 
-        file = open(modelPath, "r")
-        return jsonify(json.load(file)), 200
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
+            file = open(modelPath, "r")
+            return jsonify(json.load(file)), 200
+        except Exception as e:
+            return jsonify({"error": str(e)}), 500
+    elif request.method == "DELETE":
+        try:
+            idList = request.json["id"]
+            if type(idList) != list or type(idList) != int:
+                return jsonify({"success": False, "error": "id must be an int or list<int>"}), 400
+            
+            return jsonify({"success": True, "count": sql.removeModel(idList)})
+        except Exception as e:
+            return jsonify({"success": False, "error": str(e)}), 500
+        
 
 
 
