@@ -285,12 +285,14 @@ def setRelease(verID):
 
 
 #===== insertModel =====================================
-# PARAM: model : kesas model reference
-#        numOfImgs : int, number of images this new model is trained on
+# Inserts a new model version record on the DB.
+# DOES NOT save model file.
+#
+# PARAM: numOfImgs : int, number of images this new model is trained on
 #
 # RETURNS: int : modelID of newly inserted model else -1
 #=======================================================
-def insertModel(model, numOfImgs):
+def insertModel(numOfImgs):
     newModelId = -1
     try:
         connect = db.connect(DB_PATH)
@@ -302,13 +304,14 @@ def insertModel(model, numOfImgs):
         cur.execute(f"SELECT id FROM models WHERE versionNum='{lastest_version[0]}.{int(lastest_version[1])+1}.0';")
         newModelId = cur.fetchall()[0][0]
 
-        #use id to save model as a file
-        model.save(f"{config.MODELS_DIR}{newModelId}-model.h5")
+        #<DEPRECATED>use id to save model as a file
+        # moved to model.py
+        #model.save(f"{config.MODELS_DIR}{newModelId}-model.h5")
 
         #save as a json format
-        with open(f"{config.MODELS_DIR}{newModelId}.json", "w+") as file:
-            file.write( json.dumps(model.to_json()) )
-            file.close()
+        #with open(f"{config.MODELS_DIR}{newModelId}.json", "w+") as file:
+        #    file.write( json.dumps(model.to_json()) )
+        #    file.close()
 
         connect.commit()
     except db.OperationalError as e:
@@ -359,7 +362,6 @@ def insertModel_Label(entries):
         return count
     
 
-# TODO : improve count or replace with with void return
 #===== removeModel ==================================
 # Removes a list of models from the DB
 # 
@@ -378,18 +380,20 @@ def removeModel(modelIDs):
             count = len(modelIDs)
             #parse list/int into a string
             for id in modelIDs:
-                asStr += f"{id},"
-            asStr += "\b)"
+                asStr += f"{id}" + (")" if modelIDs.index(id) == len(modelIDs)-1 else ",")
         elif type(modelIDs) == int:
             count = 1
             asStr += f"{modelIDs})"
         else:
             raise Exception("Type not a list or int")
         
+        #check if exist
+        cur.execute(f"SELECT id FROM models WHERE id IN {asStr};")
+        count -= count - len(cur.fetchall())
+        
         #DELETE
         cur.execute(f"DELETE FROM models WHERE id IN {asStr};")
         cur.execute(f"SELECT id FROM models WHERE id IN {asStr};")
-
         count -= len(cur.fetchall())
 
         connect.commit()

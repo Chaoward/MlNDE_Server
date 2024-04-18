@@ -1,7 +1,7 @@
 from flask import Flask, request, jsonify, send_file
 from flask_cors import CORS
 from Include import sql
-from Include.model import create_training_set, fine_tune_model
+from Include.model import create_training_set, fine_tune_model, saveModel, recycleModel
 from keras import saving, models
 import json
 import config
@@ -176,9 +176,10 @@ def trainImages():
 
         # save newly updated model in file_sys and DB
         print("===== Saving Model =====")
-        modelID = sql.insertModel(model, len(img_urls))
+        modelID = sql.insertModel(len(img_urls))  #create record on DB
         if modelID < 0:
             return jsonify({"success": False, "error": "Failed to save Model"}), 500
+        saveModel(model, modelID)                 #saving as a file
 
         # Update their verified status to 2 (trained)
         print("===== Updating Verify =====")
@@ -223,11 +224,26 @@ def handleModel():
     elif request.method == "DELETE":
         try:
             idList = request.json["id"]
-            if type(idList) != list or type(idList) != int:
-                return jsonify({"success": False, "error": "id must be an int or list<int>"}), 400
+            if type(idList) != list and type(idList) != int:
+                return jsonify({"success": False, "error": f"id must be an int or list<int> : Got {str(type(idList))}"}), 400
             
-            return jsonify({"success": True, "count": sql.removeModel(idList)})
+            count = sql.removeModel(idList)
+            if type(idList) == list:
+                if (count != len(idList)):
+                    existingId = sql.select("id", "models")
+                    for Id in existingId:
+                        try:
+                            idList.remove(Id[0])
+                        except ValueError:
+                            pass
+                for Id in idList:
+                    recycleModel(Id)
+            else:
+                recycleModel(idList)
+
+            return jsonify({"success": True, "count": count})
         except Exception as e:
+            print(e.with_traceback())
             return jsonify({"success": False, "error": str(e)}), 500
         
 

@@ -18,6 +18,8 @@ from keras import layers
 #import matplotlib.pyplot as plt
 
 import config
+import json
+from os import rename
 
 # creates a base model of mobilenet that's able to predict different things
 def create_base_model(input_shape_arr=(224, 224, 3)):
@@ -213,4 +215,16 @@ def fine_tune_model(model, train_ds, label_ds):
 
     return model
 
-# --------------------------------------------------------------------
+# ----- Saving and loading ---------------------------------------------------------------
+def saveModel(model, modelID, jsonCopy=True):
+    model.save(f"{config.MODELS_DIR}{modelID}-model.h5")
+
+    if jsonCopy:
+        with open(f"{config.MODELS_DIR}{modelID}.json", "w+") as file:
+            file.write( json.dumps(model.to_json()) )
+            file.close()
+
+# marks file with ~ to denote removed
+def recycleModel(modelID):
+    rename(f"{config.MODELS_DIR}{modelID}-model.h5", f"{config.MODELS_DIR}~{modelID}-model.h5")
+    rename(f"{config.MODELS_DIR}{modelID}.json", f"{config.MODELS_DIR}~{modelID}.json")
