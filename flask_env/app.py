@@ -63,7 +63,7 @@ def handleUnverified():
                 images.append(img_dict)
             return jsonify(images)
         except Exception as e:
-            print(e)
+            print(e.with_traceback())
             return jsonify({"success": False, "error": str(e)}), 500
     elif request.method == "POST":
         try:
@@ -73,9 +73,10 @@ def handleUnverified():
                 return jsonify({"success": False, "error": "No label part"}), 400
         
             file = request.files.getlist("file")
-            labels = request.form.getlist("label")
+            sys_labels = request.form.getlist("label")
+            user_labels = None if 'userLabel' not in request.form else request.form.getlist("userLabel")
 
-            if len(file) != len(labels):
+            if len(file) != len(sys_labels):
                 return jsonify({"success": False, "error": "file and label amount mismatch"}), 400
         
             imgList = []
@@ -84,14 +85,15 @@ def handleUnverified():
                     continue
                 imgList.append({
                     "file": file[i],
-                    "sys_label": labels[i]
+                    "sysLabel": sys_labels[i],
+                    "userLabel": "" if user_labels == None else user_labels[i]
                 })
                 print(file[i].name)
-                print(labels[i])
+                print(sys_labels[i])
 
             return jsonify({"success": True, "count": sql.insertImages(imgList)}), 200
         except Exception as e:
-            print(e)
+            print(e.with_traceback())
             return jsonify({"success": False, "error": str(e)}), 500
 
         """
@@ -115,13 +117,16 @@ def verify():
         return jsonify({'success': False, 'error': 'PUT request ONLY.'})
     try:
         imgList = request.json
+        """
         for i in range(len(imgList)):
             imgList[i]["sys_label"] = imgList[i].pop("label")
             imgList[i]["user_label"] = ""   # temp
+        """
         sql.updateImages(imgList)
         count = sql.verify( list(map(lambda img: img['id'], imgList)) )
         return jsonify( {'success': True, 'count': count} if count != 0 else {'success': False, 'error': "Problem occured while verifying images"} )
     except Exception as e:
+        print(e.with_traceback())
         return jsonify({'success': False, "error": str(e)}), 500
 
 
@@ -132,6 +137,7 @@ def handleVerified():
         images = sql.select("*", "images", where="verified=1")
         return jsonify({"success": True, "images": images})
     except Exception as e:
+        print(e.with_traceback())
         return jsonify({"success": False, "error": str(e)}), 500
 
 
