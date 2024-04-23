@@ -25,3 +25,5 @@ CREATE TABLE IF NOT EXISTS model_label (
     labelID INTEGER NOT NULL,
     count INT DEFAULT 1
 );
+
+INSERT OR IGNORE INTO models (versionNum, isoDate, release, id) VALUES ('1.0.0', '2024-1-1', 1, 1);

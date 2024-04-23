@@ -457,6 +457,14 @@ if config.USE_TEST_DB:
     runScript("initTestDB")
 else:
     runScript("initDB")
+    if ( len(select("classID", "labels")) == 0):
+        con = db.connect(DB_PATH)
+        cur = con.cursor()
+        cur.execute("ATTACH DATABASE './db/labels.db' AS 'label_db';")
+        cur.execute("INSERT INTO main.labels SELECT * FROM label_db.labels;")
+        con.commit()
+        con.close()
+    
 
 if config.DEBUG and not config.USE_TEST_DB:
     runScript("copyDB")
