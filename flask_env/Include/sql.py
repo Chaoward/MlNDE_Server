@@ -79,7 +79,7 @@ def select(cols, table="", where=""):
 #===== insertImages ==================================
 # Accepts new images with labels and inserts them into DB.
 # 
-# PARAM: imgs : [ {sys_label, file, imgURL(optional)} ]
+# PARAM: imgs : [ {sysLabel, userLabel, file, imgURL(optional)} ]
 #
 # RETURNS: int, number of successful inserts
 #=====================================================
@@ -92,7 +92,7 @@ def insertImages(imgs, skipFile=False):
         
         for ele in imgs:
             #insert image data to sql DB; with imgURL if skipping file saving
-            cur.execute(f"INSERT INTO images (sysLabel) VALUES('{ele['sys_label']}');")
+            cur.execute(f"INSERT INTO images (sysLabel, userLabel) VALUES('{ele['sysLabel']}', '{ele['userLabel']}');")
             #cur.execute("INSERT INTO images (sysLabel, userLabel, imgURL) VALUES(?, ?, ?);", (ele['sys_label'], "", "" if "imgURL" not in ele else ele["imgURL"] ))
             
             if skipFile:
@@ -129,7 +129,7 @@ def insertImages(imgs, skipFile=False):
 # Accepts a list of modified images and updates them
 # in the DB.
 # 
-# PARAM: imgList : [ {"id": int, "user_label": string, "sys_label": string, ...} ]
+# PARAM: imgList : [ {"id": int, "userLabel": string, "sysLabel": string, ...} ]
 #
 # RETURNS: None
 #=====================================================
@@ -139,7 +139,7 @@ def updateImages(imgList):
         cur = connect.cursor()
 
         for img in imgList:
-            cur.execute(f"UPDATE images SET sysLabel='{img['sys_label']}', userLabel='{img['user_label']}' WHERE id = {img['id']};")
+            cur.execute(f"UPDATE images SET sysLabel='{img['sysLabel']}', userLabel='{img['userLabel']}' WHERE id = {img['id']};")
         
         connect.commit()
     except db.OperationalError as e:
