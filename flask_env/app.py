@@ -291,9 +291,9 @@ def handleRelease():
             return jsonify({"success": False, "error": "Release not Found"}), 500
         modelID = modelID[0][0]
 
-        file = open(f"{config.MODELS_DIR}{modelID}.json", "r"), 200
+        file = open(f"{config.MODELS_DIR}{modelID}.json", "r")
 
-        return jsonify(json.load(file))
+        return jsonify(json.load(file)), 200
     elif request.method == "PUT":
         try:
             version_id = request.json["verID"]
