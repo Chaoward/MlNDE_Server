@@ -1,4 +1,3 @@
-
 CREATE TABLE IF NOT EXISTS images (
     imgURL TEXT,
     sysLabel TEXT,
@@ -15,6 +14,7 @@ CREATE TABLE IF NOT EXISTS labels (
 
 CREATE TABLE IF NOT EXISTS models (
     versionNum TEXT,
+    isoDate TEXT,
     release BIT DEFAULT 0,
     imgsTrained INT DEFAULT 0,
     id INTEGER PRIMARY KEY
