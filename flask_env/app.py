@@ -9,7 +9,7 @@ import config
 app = Flask(__name__)
 CORS(app)
 
-IS_TRAINING = False
+LAST_MODID_REQUEST = None;  
 
 def isAllowedFile(fileName):
    ALLOWED_EXTENSIONS = {"jpg", "jpeg", "png", "gif"}
@@ -224,6 +224,8 @@ def handleModel():
                 return jsonify({"success": False, "error": f"Model with id \'{request.args.get('id')}\' Not Found!"}), 400
 
             file = open(modelPath, "r")
+            global LAST_MODID_REQUEST
+            LAST_MODID_REQUEST = request.args.get('id')
             return jsonify(json.load(file)), 200
         except Exception as e:
             return jsonify({"error": str(e)}), 500
@@ -292,7 +294,8 @@ def handleRelease():
         modelID = modelID[0][0]
 
         file = open(f"{config.MODELS_DIR}{modelID}/model.json", "r")
-
+        global LAST_MODID_REQUEST
+        LAST_MODID_REQUEST = modelID
         return jsonify(json.load(file)), 200
     elif request.method == "PUT":
         try:
@@ -323,3 +326,9 @@ def handleReleaseInfo():
         return jsonify(queryData), 200
     except Exception as e:
             return jsonify({"success": False, "error": str(e)}), 500
+    
+
+
+@app.route("/models/<binshard>")
+def fetchBinShards(binshard):
+    return send_file(f"{config.MODELS_DIR}{LAST_MODID_REQUEST}/{binshard}")
