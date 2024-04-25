@@ -218,10 +218,10 @@ def fine_tune_model(model, train_ds, label_ds):
 
 # ----- Saving and loading ---------------------------------------------------------------
 def saveModel(model, modelID):
-    model.save(f"{config.MODELS_DIR}{modelID}.keras")
+    model.save(f"{config.MODELS_DIR}{modelID}.h5")
     tfjs.converters.save_keras_model(model, f"{config.MODELS_DIR}{modelID}/")
 
 # marks file with ~ to denote removed
 def recycleModel(modelID):
-    rename(f"{config.MODELS_DIR}{modelID}.keras", f"{config.MODELS_DIR}~{modelID}.keras")
+    rename(f"{config.MODELS_DIR}{modelID}.h5", f"{config.MODELS_DIR}~{modelID}.h5")
     rename(f"{config.MODELS_DIR}{modelID}", f"{config.MODELS_DIR}~{modelID}")

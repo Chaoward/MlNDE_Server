@@ -174,7 +174,7 @@ def trainImages():
         #read current model file from folder
         print("===== Loading Model =====")
         lastest_model_id = sql.select("id", "models")[-1][0]
-        model = saving.load_model(f"{config.MODELS_DIR}{lastest_model_id}.keras")
+        model = saving.load_model(f"{config.MODELS_DIR}{lastest_model_id}.h5")
 
         # fine tune
         print("===== Fine Tune =====")
@@ -275,7 +275,7 @@ def handleModelInfo():
                 "images": mod[3],
                 "id": mod[4],
                 "labels": list( map(lambda x: {"label": x[0], "count": x[1]}, mod_labals) ),
-                "size": path.getsize(f"{config.MODELS_DIR}{mod[4]}.keras")   #bytes
+                "size": path.getsize(f"{config.MODELS_DIR}{mod[4]}.h5")   #bytes
             })
 
         return jsonify(payload)
