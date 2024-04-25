@@ -1,4 +1,5 @@
 import tensorflow as tf
+import tensorflowjs as tfjs
 import keras
 #from keras.applications.mobilenet_v2 import MobileNetV2
 import numpy as np
@@ -216,15 +217,11 @@ def fine_tune_model(model, train_ds, label_ds):
     return model
 
 # ----- Saving and loading ---------------------------------------------------------------
-def saveModel(model, modelID, jsonCopy=True):
-    model.save(f"{config.MODELS_DIR}{modelID}-model.h5")
-
-    if jsonCopy:
-        with open(f"{config.MODELS_DIR}{modelID}.json", "w+") as file:
-            file.write( json.dumps(model.to_json()) )
-            file.close()
+def saveModel(model, modelID):
+    model.save(f"{config.MODELS_DIR}{modelID}.keras")
+    tfjs.converters.save_keras_model(model, f"{config.MODELS_DIR}{modelID}/")
 
 # marks file with ~ to denote removed
 def recycleModel(modelID):
-    rename(f"{config.MODELS_DIR}{modelID}-model.h5", f"{config.MODELS_DIR}~{modelID}-model.h5")
-    rename(f"{config.MODELS_DIR}{modelID}.json", f"{config.MODELS_DIR}~{modelID}.json")
+    rename(f"{config.MODELS_DIR}{modelID}.keras", f"{config.MODELS_DIR}~{modelID}.keras")
+    rename(f"{config.MODELS_DIR}{modelID}", f"{config.MODELS_DIR}~{modelID}")

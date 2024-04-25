@@ -218,7 +218,7 @@ def handleModel():
     if request.method == "GET":
         try:
             from os import path
-            modelPath = f"{config.MODELS_DIR}{request.args.get('id')}.json"
+            modelPath = f"{config.MODELS_DIR}{request.args.get('id')}/model.json"
             
             if not path.exists(modelPath):
                 return jsonify({"success": False, "error": f"Model with id \'{request.args.get('id')}\' Not Found!"}), 400
@@ -291,7 +291,7 @@ def handleRelease():
             return jsonify({"success": False, "error": "Release not Found"}), 500
         modelID = modelID[0][0]
 
-        file = open(f"{config.MODELS_DIR}{modelID}.json", "r")
+        file = open(f"{config.MODELS_DIR}{modelID}/model.json", "r")
 
         return jsonify(json.load(file)), 200
     elif request.method == "PUT":
