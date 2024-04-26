@@ -9,7 +9,8 @@ import config
 app = Flask(__name__)
 CORS(app)
 
-LAST_MODID_REQUEST = None;  
+LAST_MODID_REQUEST = None
+IS_TRAINING = False  
 
 def isAllowedFile(fileName):
    ALLOWED_EXTENSIONS = {"jpg", "jpeg", "png", "gif"}
