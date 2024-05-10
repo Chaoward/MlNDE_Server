@@ -6,7 +6,7 @@ The server application for Machine Learning in Network Denied Enviornments(MlNDE
 - [Overview](#overview)
 - [Features](#features)
 - [Installation](#installation)
-- [Sponser](#sponsor)
+- [Sponser](#sponser)
 
 ## Overview
 The server stands as the main controller both handling machine learning models and its' datasets.
@@ -24,9 +24,9 @@ RESTful Web API endpoints are provided for both web-client and mobile client to 
 - **MobileNet Model with TensorflowJS Conversion**
 - **Test and Debugging Database**
 
-##Installation
+## Installation
 
-###Getting Started
+### Getting Started
 The server is a flask application that can be installed via python virtual enivornment from the requirements.txt.
 With that said however, it is recommended to setup the server on a Unix system as a core feature of tensorflowjs conversion is only available on unix as of now.
 
