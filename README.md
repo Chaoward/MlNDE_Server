@@ -16,7 +16,7 @@ RESTful Web API endpoints are provided for both web-client and mobile client to 
 
 ### MlNDE Systems
 - [Mobile Client](https://github.com/kevinmaravillas/MobileClient/tree/Main)
-- [Web Client]()
+- [Web Client](https://github.com/Chaoward/Senior-Cap_WebClient)
 
 ## Features
 - **RESTful Web API**
