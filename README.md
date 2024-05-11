@@ -58,4 +58,4 @@ flask run
 ```
 
 ## Sponser
-Proudly sponsored by NSIN/ICT USC
+Proudly sponsored by NSIN/ICT USC and Cal State LA Senior Capstone
