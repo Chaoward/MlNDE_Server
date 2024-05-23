@@ -18,10 +18,10 @@ RESTful Web API endpoints are provided for both web-client and mobile client to 
 
 ### Web API in Action
 __Handling Model Information and Version__
-<iframe src="https://drive.google.com/file/d/1bBiEquddZXDe0peZaaQ-vWIfdUdc0Xrd/preview" width="640" height="480" allow="autoplay"></iframe>
+<iframe src="https://drive.google.com/file/d/1bBiEquddZXDe0peZaaQ-vWIfdUdc0Xrd/preview" width="640" height="480"/>
 
 __Requesting Models__
-<iframe src="https://drive.google.com/file/d/1t-scLvXDrGgWTgpqOIHf9wJJ0sEqGaPi/preview" width="640" height="480" allow="autoplay"></iframe>
+<iframe src="https://drive.google.com/file/d/1t-scLvXDrGgWTgpqOIHf9wJJ0sEqGaPi/preview" width="640" height="480"/>
 
 ### Features
 - **RESTful Web API**
