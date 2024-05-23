@@ -9,7 +9,7 @@ For more about the project visit [here](https://ascent.cysun.org/project/project
 - [Mobile Client](https://github.com/kevinmaravillas/MobileClient/tree/Main)
 - [Web Client](https://github.com/Chaoward/Senior-Cap_WebClient)
 
-## About the Server
+# About the Server
 The server stands as the main controller both handling machine learning models and its' datasets.
 In the case for the MlNDE project, the server controls the fine tuning process and handles the model versions and datasets that go with it.
 The server interfaces with a SQLite database that houses the images with their labels, and models with their training information.
@@ -17,11 +17,15 @@ RESTful Web API endpoints are provided for both web-client and mobile client to 
 
 
 ### Web API in Action
-**Handling Model Information and Version**
-[here](https://drive.google.com/file/d/1bBiEquddZXDe0peZaaQ-vWIfdUdc0Xrd/preview)
 
-**Requesting Models**
-[here](https://drive.google.com/file/d/1t-scLvXDrGgWTgpqOIHf9wJJ0sEqGaPi/preview)
+[Handling Model Information and Version](https://drive.google.com/file/d/1bBiEquddZXDe0peZaaQ-vWIfdUdc0Xrd/preview)
+
+https://github.com/Chaoward/MlNDE_Server/assets/57738845/36051942-f7f6-424c-b2e6-66c36acacc1a
+
+
+[Requesting Models](https://drive.google.com/file/d/1t-scLvXDrGgWTgpqOIHf9wJJ0sEqGaPi/preview)
+
+https://github.com/Chaoward/MlNDE_Server/assets/57738845/dfcc7642-3db7-4135-a3a1-cfebcbf87ba0
 
 ### Features
 - **RESTful Web API**
@@ -30,7 +34,7 @@ RESTful Web API endpoints are provided for both web-client and mobile client to 
 - **Test and Debugging Database**
 
 
-## Installation
+# Installation
 
 ### Getting Started
 The server is a flask application that can be installed via python virtual enivornment from the requirements.txt.
